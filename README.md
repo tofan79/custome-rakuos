@@ -141,7 +141,7 @@ Hyprland keybinds (`variables.lua`) already point at them:
 ### Manual trigger
 
 ```bash
-gh workflow run "Build RakuOS Hyprland Image" --repo tofan79/hyprland-rakuos
+gh workflow run "Build RakuOS Hyprland Image" --repo tofan79/custome-rakuos
 ```
 
 Workflow inputs: `base_image_tag` (default `staging`) and `rakuos_staging`
