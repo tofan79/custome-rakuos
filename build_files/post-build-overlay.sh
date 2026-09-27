@@ -166,7 +166,6 @@ xorg-x11-server-Xwayland
 egl-wayland
 fprintd-pam
 adw-gtk3-theme
-colloid-theme
 cpio
 nss-altfiles
 papirus-icon-theme

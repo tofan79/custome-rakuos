@@ -55,7 +55,6 @@ rum install -y --refresh \
   egl-wayland \
   fprintd-pam \
   adw-gtk3-theme \
-  colloid-theme \
   papirus-icon-theme \
   bibata-cursor-theme \
   jetbrainsmono-nerd-fonts \
