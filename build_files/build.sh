@@ -64,12 +64,14 @@ rum install -y --refresh \
   gvfs-nfs \
   gvfs-smb \
   pavucontrol \
+  playerctl \
   NetworkManager-adsl \
   NetworkManager-bluetooth \
   NetworkManager-ppp \
   NetworkManager-wwan \
   nm-connection-editor \
   power-profiles-daemon \
+  brightnessctl \
   libnotify \
   sddm \
   sddm-x11 \
@@ -95,6 +97,7 @@ rum install -y --refresh \
   tesseract-langpack-chi_sim_vert \
   tesseract-langpack-chi_tra \
   tesseract-langpack-chi_tra_vert \
+  zbar \
   wl-clipboard \
   dolphin \
   nomacs \
