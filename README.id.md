@@ -144,7 +144,7 @@ Keybind Hyprland (`variables.lua`) sudah mengarah ke semuanya:
 ### Pemicu manual
 
 ```bash
-gh workflow run "Build RakuOS Hyprland Image" --repo tofan79/custome-rakuos
+gh workflow run "Build RakuOS Hyprland Image" --repo tofan79/custome-rakuos --ref hyprland
 ```
 
 Input workflow: `base_image_tag` (default `staging`) dan `rakuos_staging`
