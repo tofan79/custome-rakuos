@@ -1,5 +1,11 @@
 [General]
 ColorScheme=Noctalia
 Name=noctalia
-IconTheme=Colloid-Dracula
 TerminalApplication=kitty
+
+[Icons]
+Theme=Colloid-Dracula
+
+[KDE]
+cursorSize=24
+cursorTheme=Bibata-Modern-Ice
