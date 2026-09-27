@@ -139,7 +139,7 @@ KineticWE's default keybinds already point at them:
 ### Manual trigger
 
 ```bash
-gh workflow run "Build RakuOS KineticWE Image" --repo tofan79/custome-rakuos
+gh workflow run "Build RakuOS KineticWE Image" --repo tofan79/custome-rakuos --ref kineticwe
 ```
 
 Workflow inputs: `base_image_tag` (default `staging`) and `rakuos_staging`
