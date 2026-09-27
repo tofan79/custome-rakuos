@@ -144,7 +144,7 @@ Keybind KineticWE sudah mengarah ke semuanya:
 ### Pemicu manual
 
 ```bash
-gh workflow run "Build RakuOS KineticWE Image" --repo tofan79/hyprland-rakuos
+gh workflow run "Build RakuOS KineticWE Image" --repo tofan79/custome-rakuos
 ```
 
 Input workflow: `base_image_tag` (default `staging`) dan `rakuos_staging`
