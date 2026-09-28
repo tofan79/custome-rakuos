@@ -23,7 +23,7 @@ audio/x-flac=mpv.desktop
 audio/mpeg=mpv.desktop
 audio/ogg=mpv.desktop
 audio/opus=mpv.desktop
-inode/directory=nautilus.desktop
+inode/directory=org.gnome.Nautilus.desktop
 
 [Added Associations]
 x-scheme-handler/http=zen-browser.desktop
@@ -50,4 +50,4 @@ audio/x-flac=mpv.desktop
 audio/mpeg=mpv.desktop
 audio/ogg=mpv.desktop
 audio/opus=mpv.desktop
-inode/directory=nautilus.desktop
+inode/directory=org.gnome.Nautilus.desktop
