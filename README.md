@@ -76,18 +76,44 @@ adapt `monitors.lua`. Everything else is a standard Hyprland/RakuOS desktop.
   systemd-oomd-defaults, SDDM
 - **Tools:** swash, tesseract (+10 langpacks), zbar, hyprpicker, cliphist,
   brightnessctl, playerctl, unzip/zip/7zip/unar, bat, fzf, zoxide
-- **Theme/fonts:** colloid-theme (GTK + icons), papirus-icon-theme (fallback), jetbrains-mono-nerd-fonts
+- **Theme/fonts:** `OrigamiPaper` GTK theme + `Colloid-Dracula` icons (both
+  from `rakuos-branding` in the base image), `Bibata-Modern-Ice` cursor
+  (`bibata-cursor-theme`, via Terra), `papirus-icon-theme` (fallback),
+  `jetbrains-mono-nerd-fonts` (via Terra)
 - **Terra** (vendor repo, enabled at build: `bibata-cursor-theme`,
   `jetbrainsmono-nerd-fonts`, plus base deps `dysk`/`fresh`/`surge`/`termflix`/`wlctl`)
 - **Apps:** `rakuos-software-qt` (Software Center) + `rakuos-system-qt`
-  (`org.rakuos.System` settings) + `rakuos-welcome-qt` — installed baked,
-  autostart entries removed (open only via menu)
+  (`org.rakuos.System` settings) + `rakuos-welcome-qt` — baked into the image
+  and autostarted at login, so the tray is available out of the box
 - **Browser (overlay):** `zen-browser` — prebaked via `packages.list` /
   `packages-live.list`, present on live and installed systems
 - **NVIDIA dGPU:** inherited from the NVIDIA base image (driver + CUDA stack) —
   generic for any NVIDIA device; machines without NVIDIA simply don't use it
 - **Time sync:** `chrony` for automatic NTP (RTC stays UTC — Windows already
   configured with `RealTimeIsUniversal=1`, so no local-time offset)
+
+### Appearance
+
+| Layer | Value | Where it comes from |
+|---|---|---|
+| GTK theme | `OrigamiPaper` | `rakuos-branding` (base image) |
+| Icons | `Colloid-Dracula` | `rakuos-branding` (base image) |
+| Cursor | `Bibata-Modern-Ice`, size 24 | `bibata-cursor-theme` via Terra |
+| Qt | Fusion + Noctalia colors | `qt6ct.conf` in skel |
+
+The cursor is applied through **two different mechanisms**, because the session
+starts under uWSM and no gsettings seed is needed:
+
+- **Wayland/compositor:** `system_files/etc/skel/.config/uwsm/env` exports
+  `XCURSOR_THEME` and `XCURSOR_SIZE`.
+- **Hyprland's own cursor:** the same file sets `HYPRCURSOR_THEME` and
+  `HYPRCURSOR_SIZE`.
+- **GTK:** `gtk-3.0/settings.ini` and `gtk-4.0/settings.ini` set
+  `gtk-cursor-theme-name` / `gtk-cursor-theme-size`.
+
+To change the cursor, edit the two skel files above and rebuild — a stale
+`/usr/share/icons/default/index.theme` on an already-installed system will
+override the GTK setting until the image is redeployed.
 
 ## Not included (optional)
 
@@ -131,12 +157,15 @@ Hyprland keybinds (`variables.lua`) already point at them:
 4. Disables `rum-makecache.timer` — the periodic `rum makecache` repo-metadata
    refresh is unneeded on an immutable image; `rum` pulls metadata on demand
    during install.
-4. Pushes `latest` + date tag to `quay.io/mindset404/hyprland-nvidia-v3`.
-5. **Retention:** deletes date tags older than the 5 newest (keeps storage
+5. Cleans runtime state left behind by the build: the final `RUN` empties
+   `/run`, `/tmp` and `/boot`, matching what `rakuos-base` does on its own
+   image.
+6. Pushes `latest` + date tag to `quay.io/mindset404/hyprland-nvidia-v3`.
+7. **Retention:** deletes date tags older than the 5 newest (keeps storage
    within Quay free tier).
-6. Terra signing-key auto-recovery (refreshes `key.asc` from Fyralabs, falls
+8. Terra signing-key auto-recovery (refreshes `key.asc` from Fyralabs, falls
    back to disabling `gpgcheck` if the keys rotate again).
-7. Enables NTP (`chrony`) — SELinux stays removed per base policy.
+9. Enables NTP (`chrony`) — SELinux stays disabled per base policy.
 
 ### Manual trigger
 
