@@ -77,12 +77,15 @@ Selebihnya adalah desktop KineticWE/RakuOS standar.
   systemd-oomd-defaults, SDDM
 - **Perkakas:** tesseract (+10 langpack),
   unzip/zip/7zip/unar, bat, fzf, zoxide, wl-clipboard
-- **Tema/font:** colloid-theme (GTK + ikon), papirus-icon-theme (fallback), jetbrains-mono-nerd-fonts
+- **Tema/font:** tema GTK `OrigamiPaper` + ikon `Colloid-Dracula` (keduanya dari
+  `rakuos-branding` di base image), kursor `Bibata-Modern-Ice`
+  (`bibata-cursor-theme`, via Terra), `papirus-icon-theme` (fallback),
+  `jetbrains-mono-nerd-fonts` (via Terra)
 - **Terra** (repo vendor, diaktifkan saat build: `bibata-cursor-theme`,
   `jetbrainsmono-nerd-fonts`, plus deps dasar `dysk`/`fresh`/`surge`/`termflix`/`wlctl`)
 - **Aplikasi:** `rakuos-software-qt` (Software Center) + `rakuos-system-qt`
   (`org.rakuos.System`, pengaturan sistem) + `rakuos-welcome-qt` —
-  ditanam saat build, entri autostart dihapus (dibuka hanya lewat menu)
+  ditanam saat build dan autostart saat login, jadi tray langsung tersedia
 - **Browser (overlay):** `zen-browser` — ditanam lebih dulu via `packages.list` /
   `packages-live.list`, tersedia di ISO live dan sistem terpasang
 - **NVIDIA dGPU:** diturunkan dari base image NVIDIA (driver + stack CUDA) —
@@ -91,6 +94,29 @@ Selebihnya adalah desktop KineticWE/RakuOS standar.
 - **Sinkronisasi waktu:** `chrony` untuk NTP otomatis (RTC tetap UTC — Windows
   sudah dikonfigurasi dengan `RealTimeIsUniversal=1`, jadi tidak ada offset
   zona waktu lokal)
+
+### Tampilan
+
+| Lapisan | Nilai | Asalnya |
+|---|---|---|
+| Tema GTK | `OrigamiPaper` | `rakuos-branding` (base image) |
+| Ikon | `Colloid-Dracula` | `rakuos-branding` (base image) |
+| Kursor | `Bibata-Modern-Ice`, ukuran 24 | `bibata-cursor-theme` via Terra |
+| Qt | Fusion + warna Noctalia | `qt6ct.conf` di skel |
+
+Berbeda dari image Hyprland, branch ini tidak punya sesi uWSM, jadi pengaturan
+kursor dan ikon dideklarasikan sekali untuk seluruh sesi:
+
+- **KineticWE:** `system_files/etc/skel/.config/kineticwe/appearance.kwe`
+  mengatur `CursorTheme`, `CursorSize` dan `IconTheme`.
+- **GTK:** `gtk-3.0/settings.ini` dan `gtk-4.0/settings.ini` mengatur
+  `gtk-cursor-theme-name` / `gtk-cursor-theme-size` secara terpisah, jadi
+  keduanya harus sama agar antartoolkit tidak berbeda.
+
+Untuk mengganti kursor, edit `appearance.kwe` dan dua file pengaturan GTK, lalu
+build ulang — `/usr/share/icons/default/index.theme` yang tertinggal di sistem
+terpasang akan mengoverride pengaturan GTK sampai image baru benar-benar
+dideploy.
 
 ## Tidak disertakan (opsional)
 
@@ -134,12 +160,15 @@ Keybind KineticWE sudah mengarah ke semuanya:
 4. Menonaktifkan `rum-makecache.timer` — refresh metadata repo `rum makecache`
    berkala tidak diperlukan di gambar immutable; `rum` mengambil metadata
    on-demand saat install.
-5. Push `latest` + tag tanggal ke `quay.io/mindset404/kineticwe-nvidia-v3`.
-6. **Retensi:** menghapus tag tanggal yang lebih lama dari 5 terbaru (menjaga
+5. Membersihkan sisa state runtime dari proses build: `RUN` terakhir mengosongkan
+   `/run`, `/tmp` dan `/boot`, sama seperti yang dilakukan `rakuos-base` pada
+   gambarnya sendiri.
+6. Push `latest` + tag tanggal ke `quay.io/mindset404/kineticwe-nvidia-v3`.
+7. **Retensi:** menghapus tag tanggal yang lebih lama dari 5 terbaru (menjaga
    penyimpanan tetap dalam kuota gratis Quay).
-7. Pemulihan otomatis kunci tanda tangan Terra (refresh `key.asc` dari Fyralabs,
+8. Pemulihan otomatis kunci tanda tangan Terra (refresh `key.asc` dari Fyralabs,
    kembali ke menonaktifkan `gpgcheck` jika kunci berputar lagi).
-8. Mengaktifkan NTP (`chrony`) — SELinux tetap dihapus sesuai kebijakan base.
+9. Mengaktifkan NTP (`chrony`) — SELinux tetap nonaktif sesuai kebijakan base.
 
 ### Pemicu manual
 
