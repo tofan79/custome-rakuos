@@ -165,16 +165,6 @@ for wpdir in /usr/share/wallpapers/RakuOS-*/; do
 done
 cp -n /usr/share/wallpapers/default.jpg /etc/skel/Pictures/Wallpaper/default.jpg || true
 
-## Set Bibata as default cursor theme systemwide
-mkdir -p /usr/share/icons/default
-cat > /usr/share/icons/default/index.theme << 'EOF'
-[Icon Theme]
-Inherits=Bibata-Modern-Ice
-EOF
-
-## Remove superseded packages
-rum remove -y wofi waybar swaylock alacritty fuzzel 2>/dev/null || true
-
 ## Enable NTP: chrony keeps clock synced across reboots.
 ## RTC is UTC (Windows already configured with RealTimeIsUniversal=1 in registry),
 ## so no need for timedatectl set-local-rtc — both OS agree on UTC.
@@ -263,12 +253,6 @@ EOF
 ## - nvidia-settings-load: --load-config-only (X11-only) intermittently
 ## ► AMD-only devices: this file does not exist, rm -f is a no-op (safe).
 rm -f /etc/xdg/autostart/nvidia-settings-load.desktop 2>/dev/null || true
-
-## RakuOS Software Center: install engine + Qt frontend, but do NOT autostart
-## the tray daemon. The only trigger for it is the XDG autostart file below
-## (no systemd unit / dbus activation); removing it keeps the Software Center
-## fully functional while skipping the background tray at every login.
-rm -f /etc/xdg/autostart/rakuos-software-tray.desktop
 
 ## Create flatpak exports dir (fix rakuos-flatpak-watcher)
 mkdir -p /var/lib/flatpak/exports/bin
