@@ -114,7 +114,8 @@ rum install -y --refresh \
   cliphist \
   brightnessctl \
   playerctl \
-  dolphin \
+  nautilus \
+  nautilus-open-any-terminal-git \
   nomacs \
   unzip \
   zip \

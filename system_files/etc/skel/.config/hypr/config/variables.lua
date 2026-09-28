@@ -3,7 +3,7 @@
 -- (bind di binds.lua memakai variabel ini)
 
 TERMINAL      = "kitty"
-FILE_MANAGER  = "dolphin"
+FILE_MANAGER  = "nautilus"
 BROWSER       = "zen-browser"
 EDITOR        = "zeditor"
 CALCULATOR    = "gnome-calculator"

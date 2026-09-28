@@ -62,17 +62,10 @@ hl.window_rule({ match = { class = "^(org\\.kde\\.keditfiletype)$" }, float = tr
 hl.window_rule({ match = { class = "^(org\\.kde\\.ark)$" }, size = { "max(monitor_w, monitor_h)*0.40", "min(monitor_w, monitor_h)*0.40" } })
 hl.window_rule({ match = { class = "^(.*satty.*)$", title = "^(Satty)$" }, min_size = { "max(monitor_w, monitor_h)*0.35", "min(monitor_w, monitor_h)*0.35" }, float = true })
 hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?)$" }, float = true, size = { "monitor_w*0.70", "monitor_h*0.70" } })
-hl.window_rule({
-    match = {
-        class = "^(org\\.kde\\.dolphin)$",
-        title = "negative:^(Moving.*|Create New.*|Extract.*|Compress.*|Copying.*|Progress.*|Configure.*|Properties.*|Choose\\sApplication.*)$",
-    },
-    size = { "max(monitor_w, monitor_h)*0.50", "min(monitor_w, monitor_h)*0.55" },
-    move = {
-        "max(20, min(cursor_x - (window_w*0.50), monitor_w - window_w + 20))", -- X axis clamping
-        "max(20, min(cursor_y - 50, monitor_h - window_h + 20))" -- Y axis clamping
-    },
-})
+-- Dolphin sudah dihapus, penggantinya Nautilus. Rule float kecil di bawah
+-- ini hanya untuk dialog progres/arsip milik Dolphin ("Moving...",
+-- "Extract...", "Compress...", "Copying..."). Nautilus tidak punya dialog
+-- dengan bentuk itu, jadi rule-nya ikut dihapus dan bukan diterjemahkan.
 
 -- Opacity Overrides
 -- Hanya pemutar video & image viewer yang di-override 100% (biar konten media terlihat benar).
