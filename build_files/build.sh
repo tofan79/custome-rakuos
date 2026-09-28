@@ -98,7 +98,8 @@ rum install -y --refresh \
   tesseract-langpack-chi_tra_vert \
   zbar \
   wl-clipboard \
-  dolphin \
+  nautilus \
+  nautilus-open-any-terminal-git \
   nomacs \
   unzip \
   zip \

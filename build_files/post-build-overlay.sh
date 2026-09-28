@@ -211,7 +211,8 @@ eza
 fastfetch
 wl-clipboard
 starship
-dolphin
+nautilus
+nautilus-open-any-terminal-git
 nomacs
 unzip
 zip
