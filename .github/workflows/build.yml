@@ -53,6 +53,32 @@ jobs:
           echo "Base image: quay.io/rakuos/rakuos-base-nvidia-v3:${BASE_IMAGE_TAG}"
           echo "Base digest: ${DIGEST}"
 
+      - name: Resolve Fedora version
+        id: fedora_version
+        env:
+          BASE_IMAGE_TAG: ${{ github.event.inputs.base_image_tag || 'staging' }}
+        run: |
+          # rakuos-software reads org.rakuos.fedora.version to notice a Fedora
+          # version change across an image update and offer a soft reset. Prefer
+          # the value the base image declares so ours can never disagree with
+          # what the Software Center sees. Bases built before 2026-09-29 do not
+          # carry the label yet, so fall back to the tag mapping and it retires
+          # itself once every base publishes the label.
+          REF="quay.io/rakuos/rakuos-base-nvidia-v3:${BASE_IMAGE_TAG}"
+          VERSION=$(docker buildx imagetools inspect "$REF" \
+            --format '{{ index .Image "Labels" "org.rakuos.fedora.version" }}' 2>/dev/null || true)
+
+          if [ -z "$VERSION" ] || [ "$VERSION" = "<no value>" ]; then
+            case "${BASE_IMAGE_TAG}" in
+              rawide|rawhide) VERSION="rawhide" ;;
+              *)              VERSION="44" ;;
+            esac
+            echo "Base does not publish org.rakuos.fedora.version; using ${VERSION}"
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Fedora version: ${VERSION}"
+
       - name: Build image
         run: |
           docker buildx build \
@@ -68,6 +94,7 @@ jobs:
             --label 'org.opencontainers.image.source=https://github.com/${{ github.repository }}' \
             --label 'org.opencontainers.image.revision=${{ github.sha }}' \
             --label "org.rakuos.base-digest=${{ steps.base_digest.outputs.digest }}" \
+            --label "org.rakuos.fedora.version=${{ steps.fedora_version.outputs.version }}" \
             --label 'org.opencontainers.image.vendor=RakuOS' \
             --label 'org.opencontainers.image.description=RakuOS Hyprland' \
             -t ${{ env.IMAGE_NAME }}:latest \
