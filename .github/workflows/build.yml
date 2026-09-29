@@ -1,4 +1,4 @@
-name: Build RakuOS Hyprland Image
+name: Build RakuOS Custome Image
 
 on:
   workflow_dispatch:
