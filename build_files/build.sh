@@ -211,6 +211,27 @@ for _theme_dir in /usr/share/icons/*/; do
 done
 unset _theme _theme_dir
 
+## Point nautilus-open-any-terminal at the terminal we actually ship.
+##
+## The extension hardcodes terminal = "gnome-terminal" (nautilus_open_any_
+## terminal.py:153) and never probes whether that binary exists, so its
+## "Open in Terminal" entry dies with
+##   FileNotFoundError: [Errno 2] No such file or directory: 'gnome-terminal'
+## on any image without GNOME Terminal. This image ships kitty instead.
+##
+## Set in the dconf system database rather than /etc/skel: GLib's default
+## settings backend is dconf, which does not read a keyfile at
+## .config/glib-2.0/settings. A system default also covers existing users,
+## while a skeleton file would only reach accounts created afterwards.
+## Placed after glib-compile-schemas above, since the value is only readable
+## once the extension's schema is compiled.
+mkdir -p /etc/dconf/db/local.d
+cat > /etc/dconf/db/local.d/00-nautilus-open-any-terminal << 'EOF'
+[com/github/stunkymonkey/nautilus-open-any-terminal]
+terminal='kitty'
+EOF
+dconf update 2>/dev/null || true
+
 ## Enable NTP: chrony keeps clock synced across reboots.
 ## RTC is UTC (Windows already configured with RealTimeIsUniversal=1 in registry),
 ## so no need for timedatectl set-local-rtc — both OS agree on UTC.
