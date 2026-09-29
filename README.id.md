@@ -47,9 +47,9 @@ kamu fork build-nya**.
 |---|---|---|
 | `build_files/build.sh` — stack desktop, SDDM, dotfiles, peredam tmpfiles, penulisan GID, chrony | Inti gambar | ✅ biarkan |
 | `system_files/etc/sddm.conf.d/10-kineticwe.conf` | greeter X11 SDDM; login pengguna memulai sesi Wayland KineticWE | ✅ biarkan |
-| `build_files/build.sh` — blok "Mask dkms" | modul sudah ditanam di gambar; dkms runtime tidak pernah dibutuhkan | ✅ biarkan pada gambar NVIDIA |
-| `build_files/build.sh` — blok "Disable fwupd" | fwupd menggantung (D-state) pada ASUS ini | ⚠️ hapus — normal di perangkat lain |
-| `build_files/build.sh` — blok "Mask mcelog" | unit kosmetik khusus AMD | ⚠️ mesin Intel: biarkan mcelog aktif |
+| `system_files/etc/systemd/system/dkms.service` (symlink `/dev/null`) | modul sudah ditanam di gambar; dkms runtime tidak pernah dibutuhkan | ✅ biarkan pada gambar NVIDIA |
+| `system_files/etc/systemd/system/fwupd{,-refresh}.*` (symlink `/dev/null`) | fwupd menggantung (D-state) pada ASUS ini | ⚠️ hapus — normal di perangkat lain |
+| `system_files/etc/systemd/system/mcelog.service` (symlink `/dev/null`) | unit kosmetik khusus AMD | ⚠️ mesin Intel: biarkan mcelog aktif |
 | `system_files/usr/lib/bootc/kargs.d/11-kineticwe-tsc.toml` | `tsc=reliable` (TSC salah deteksi oleh watchdog) | ⚠️ hapus kecuali gejala yang sama |
 | `system_files/etc/udev/rules.d/99-thinkpad-thresholds-udev.rules` | mematikan aturan baterai ThinkPad | ⚠️ hapus di ThinkPad/non-ASUS |
 | `system_files/var/usrlocal/bin/fwupdmgr` | shim; hanya butuh karena fwupd di-mask | ⚠️ hapus |
@@ -248,7 +248,7 @@ Hanya log, tanpa dampak fungsional, aman di perangkat mana pun:
 - `bpf-restrict-fs` — kernel gagal memuat objek BPF LSM
 - `mcelog` gagal: **CPU AMD tidak didukung daemon userspace mcelog**
   (`AMD Processor family 23`); dekode MCE AMD ada di dalam kernel
-  (`edac_mce_amd`) sehingga unit-nya di-`mask` di `build.sh`
+  (`edac_mce_amd`) sehingga unit-nya di-`mask` (symlink di `system_files`)
 
 > **Biarkan saja.** Ini pesan log kernel/driver, bukan unit systemd yang bisa
 > di-`mask`; satu-satunya unit (`mcelog`) memang sudah di-mask di `build.sh`.
@@ -292,10 +292,11 @@ Khusus perangkat — hapus saat membangun untuk hardware lain:
 >   aturan ThinkPad (driver baterai ASUS tidak punya atribut charge itu)
 > - `system_files/usr/lib/systemd/system/nvidia-powerd.service.d/override.conf`
 >   (+ yang persistenced) — khusus NVIDIA, hapus di mesin iGPU-only
-> - `system_files/var/usrlocal/bin/fwupdmgr` + blok "Disable fwupd" di
->   `build_files/build.sh` — gantung D-state khusus ASUS ini; hardware lain
+> - `system_files/var/usrlocal/bin/fwupdmgr` + symlink
+>   `system_files/etc/systemd/system/fwupd{,-refresh}.*` — gantung D-state
+>   khusus ASUS ini; hardware lain
 >   biasanya punya update firmware yang berfungsi
-> - blok "Mask mcelog" di `build_files/build.sh` — khusus AMD (Intel
+> - `system_files/etc/systemd/system/mcelog.service` — khusus AMD (Intel
 >   membiarkan mcelog aktif)
 
 ---
