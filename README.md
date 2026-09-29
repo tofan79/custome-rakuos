@@ -42,11 +42,11 @@ specific to that hardware and should be **removed when you fork the build**.
 
 | Part of this repo | What it is | On another device |
 |---|---|---|
-| `build_files/build.sh` — desktop stack, SDDM, dotfiles, tmpfiles quieting, GID baking, chrony | Core image | ✅ keep |
+| `build_files/build.sh` — desktop stack, SDDM, dotfiles, GID baking, chrony | Core image | ✅ keep |
 | `system_files/etc/sddm.conf.d/10-hyprland.conf` | SDDM X11 greeter; user login still starts the Hyprland Wayland/UWSM session | ✅ keep |
-| `build_files/build.sh` — "Mask dkms" block | modules pre-baked; runtime dkms never needed | ✅ keep on NVIDIA images |
-| `build_files/build.sh` — "Disable fwupd" block | fwupd hangs in D-state on this ASUS | ⚠️ remove — works fine elsewhere |
-| `build_files/build.sh` — "Mask mcelog" block | AMD-only cosmetic unit | ⚠️ Intel machines: keep mcelog |
+| `system_files/etc/systemd/system/dkms.service` (symlink `/dev/null`) | modules pre-baked; runtime dkms never needed | ✅ keep on NVIDIA images |
+| `system_files/etc/systemd/system/fwupd{,-refresh}.*` (symlink `/dev/null`) | fwupd hangs in D-state on this ASUS | ⚠️ remove — works fine elsewhere |
+| `system_files/etc/systemd/system/mcelog.service` (symlink `/dev/null`) | AMD-only cosmetic unit | ⚠️ Intel machines: keep mcelog |
 | `system_files/usr/lib/bootc/kargs.d/11-hyprland-tsc.toml` | `tsc=reliable` (TSC watchdog false alarm) | ⚠️ remove unless same symptom |
 | `system_files/etc/udev/rules.d/99-thinkpad-thresholds-udev.rules` | masks a ThinkPad battery rule | ⚠️ remove on ThinkPad/non-ASUS |
 | `system_files/var/usrlocal/bin/fwupdmgr` | shim; only needed because fwupd is masked | ⚠️ remove |
@@ -151,9 +151,12 @@ Hyprland keybinds (`variables.lua`) already point at them:
    `mindset/Mindset-Apps`, Terra/RPM-Fusion repos tuned).
 3. Bakes canonical system GIDs into `/etc/group` (audio/video/input/kvm/utmp
    etc. — the `bootc-minimal` base lacks the `altfiles` NSS module, so
-   `getent` falls back to the file) and quiets noisy systemd tmpfiles
-   (`home.conf`/`root.conf` → `/dev/null`, trimmed `provision.conf`) in
-   `build.sh`.
+   `getent` falls back to the file) in `build_files/build.sh`. Quieter
+   systemd config ships as files under `system_files`: `etc/tmpfiles.d/`
+   (`home.conf`/`root.conf` → `/dev/null`, trimmed `provision.conf`) and
+   `etc/systemd/{system,user}/` symlinks to `/dev/null` for every unit this
+   image masks. `system_files/usr/share/doc/rakuos/masked-units.md` records
+   why each one is masked.
 4. Disables `rum-makecache.timer` — the periodic `rum makecache` repo-metadata
    refresh is unneeded on an immutable image; `rum` pulls metadata on demand
    during install.
@@ -166,6 +169,14 @@ Hyprland keybinds (`variables.lua`) already point at them:
 8. Terra signing-key auto-recovery (refreshes `key.asc` from Fyralabs, falls
    back to disabling `gpgcheck` if the keys rotate again).
 9. Enables NTP (`chrony`) — SELinux stays disabled per base policy.
+10. Rebuilds desktop caches (`glib-compile-schemas`, desktop/MIME/icon) and
+    compiles the dconf system database. These have to run here, after every
+    package is installed: the base image ships no RPM file triggers, so the
+    base's `gschemas.compiled` predates `nautilus-50.3` and Nautilus aborts
+    on startup without it. The nautilus-open-any-terminal default itself is a
+    file — `system_files/etc/dconf/db/local.d/00-nautilus-open-any-terminal`
+    — pointing the extension at kitty, since it hardcodes `gnome-terminal`
+    and crashes on an image that ships kitty instead.
 
 ### Manual trigger
 
@@ -244,7 +255,7 @@ Log-only, no functional impact, safe on any device:
 - `bpf-restrict-fs` — BPF LSM object load failure on this kernel
 - `mcelog` fails: **AMD CPUs are not supported by the mcelog userspace** daemon
   (`AMD Processor family 23`); AMD MCE decoding is in-kernel (`edac_mce_amd`)
-  so the unit is `mask`ed in `build.sh`
+  so the unit is `mask`ed (symlink in `system_files/etc/systemd/system/`)
 
 ### 2. Real hardware workarounds shipped in this image
 
@@ -284,9 +295,9 @@ Device-specific — remove when building for other hardware:
 >   ThinkPad rule (ASUS battery driver lacks those charge attrs)
 > - `system_files/usr/lib/systemd/system/nvidia-powerd.service.d/override.conf`
 >   (+ the persistenced one) — NVIDIA-only, remove on iGPU-only machines
-> - `system_files/var/usrlocal/bin/fwupdmgr` + the "Disable fwupd" block in
->   `build_files/build.sh` — this ASUS D-state hang; other hardware usually has
->   working firmware updates
+> - `system_files/var/usrlocal/bin/fwupdmgr` + the masked
+>   `system_files/etc/systemd/system/fwupd{,-refresh}.*` symlinks — this ASUS
+>   D-state hang; other hardware usually has working firmware updates
 > - the "Mask mcelog" block in `build_files/build.sh` — AMD only (Intel keeps
 >   mcelog)
 > - `system_files/etc/skel/.config/hypr/config/monitors.lua` — replace the

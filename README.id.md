@@ -43,11 +43,11 @@ kamu fork build-nya**.
 
 | Bagian dari repo ini | Fungsinya | Di perangkat lain |
 |---|---|---|
-| `build_files/build.sh` — stack desktop, SDDM, dotfiles, peredam tmpfiles, penulisan GID, chrony | Inti gambar | ✅ biarkan |
+| `build_files/build.sh` — stack desktop, SDDM, dotfiles, penulisan GID, chrony | Inti gambar | ✅ biarkan |
 | `system_files/etc/sddm.conf.d/10-hyprland.conf` | greeter X11 SDDM; login pengguna tetap memulai sesi Wayland/UWSM Hyprland | ✅ biarkan |
-| `build_files/build.sh` — blok "Mask dkms" | modul sudah ditanam di gambar; dkms runtime tidak pernah dibutuhkan | ✅ biarkan pada gambar NVIDIA |
-| `build_files/build.sh` — blok "Disable fwupd" | fwupd menggantung (D-state) pada ASUS ini | ⚠️ hapus — normal di perangkat lain |
-| `build_files/build.sh` — blok "Mask mcelog" | unit kosmetik khusus AMD | ⚠️ mesin Intel: biarkan mcelog aktif |
+| `system_files/etc/systemd/system/dkms.service` (symlink `/dev/null`) | modul sudah ditanam di gambar; dkms runtime tidak pernah dibutuhkan | ✅ biarkan pada gambar NVIDIA |
+| `system_files/etc/systemd/system/fwupd{,-refresh}.*` (symlink `/dev/null`) | fwupd menggantung (D-state) pada ASUS ini | ⚠️ hapus — normal di perangkat lain |
+| `system_files/etc/systemd/system/mcelog.service` (symlink `/dev/null`) | unit kosmetik khusus AMD | ⚠️ mesin Intel: biarkan mcelog aktif |
 | `system_files/usr/lib/bootc/kargs.d/11-hyprland-tsc.toml` | `tsc=reliable` (TSC salah deteksi oleh watchdog) | ⚠️ hapus kecuali gejala yang sama |
 | `system_files/etc/udev/rules.d/99-thinkpad-thresholds-udev.rules` | mematikan aturan baterai ThinkPad | ⚠️ hapus di ThinkPad/non-ASUS |
 | `system_files/var/usrlocal/bin/fwupdmgr` | shim; hanya butuh karena fwupd di-mask | ⚠️ hapus |
@@ -155,8 +155,8 @@ Keybind Hyprland (`variables.lua`) sudah mengarah ke semuanya:
 3. Menulis GID sistem kanonik ke `/etc/group` (audio/video/input/kvm/utmp
    dst. — base `bootc-minimal` tidak punya modul NSS `altfiles`, jadi
    `getent` memakai file) dan meredam tmpfiles systemd yang bising
-   (`home.conf`/`root.conf` → `/dev/null`, `provision.conf` dipangkas) di
-   `build.sh`.
+   di `system_files/etc/tmpfiles.d/` (`home.conf`/`root.conf` → `/dev/null`,
+  `provision.conf` dipangkas).
 4. Menonaktifkan `rum-makecache.timer` — refresh metadata repo `rum makecache`
    berkala tidak diperlukan di gambar immutable; `rum` mengambil metadata
    on-demand saat install.
@@ -248,10 +248,10 @@ Hanya log, tanpa dampak fungsional, aman di perangkat mana pun:
 - `bpf-restrict-fs` — kernel gagal memuat objek BPF LSM
 - `mcelog` gagal: **CPU AMD tidak didukung daemon userspace mcelog**
   (`AMD Processor family 23`); dekode MCE AMD ada di dalam kernel
-  (`edac_mce_amd`) sehingga unit-nya di-`mask` di `build.sh`
+  (`edac_mce_amd`) sehingga unit-nya di-`mask` (symlink di `system_files`)
 
 > **Biarkan saja.** Ini pesan log kernel/driver, bukan unit systemd yang bisa
-> di-`mask`; satu-satunya unit (`mcelog`) memang sudah di-mask di `build.sh`.
+> di-`mask`; satu-satunya unit (`mcelog`) memang sudah di-mask di `system_files`.
 
 ### 2. Workaround hardware nyata yang disertakan dalam gambar
 
@@ -292,10 +292,11 @@ Khusus perangkat — hapus saat membangun untuk hardware lain:
 >   aturan ThinkPad (driver baterai ASUS tidak punya atribut charge itu)
 > - `system_files/usr/lib/systemd/system/nvidia-powerd.service.d/override.conf`
 >   (+ yang persistenced) — khusus NVIDIA, hapus di mesin iGPU-only
-> - `system_files/var/usrlocal/bin/fwupdmgr` + blok "Disable fwupd" di
->   `build_files/build.sh` — gantung D-state khusus ASUS ini; hardware lain
+> - `system_files/var/usrlocal/bin/fwupdmgr` + symlink
+>   `system_files/etc/systemd/system/fwupd{,-refresh}.*` — gantung D-state
+>   khusus ASUS ini; hardware lain
 >   biasanya punya update firmware yang berfungsi
-> - blok "Mask mcelog" di `build_files/build.sh` — khusus AMD (Intel
+> - `system_files/etc/systemd/system/mcelog.service` — khusus AMD (Intel
 >   membiarkan mcelog aktif)
 > - `system_files/etc/skel/.config/hypr/config/monitors.lua` — ganti tata
 >   letak `eDP-1 1920x1080@144` dengan layar/resolusi kamu sendiri

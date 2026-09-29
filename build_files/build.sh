@@ -170,20 +170,9 @@ for nvidia_xorg_file in "${nvidia_xorg_files[@]}"; do
   echo "  ok ${nvidia_xorg_file}"
 done
 
-## Populate skeleton wallpaper folder with the OFFICIAL base RakuOS wallpaper
-## set. Noctalia's wallpaper picker points at ~/Pictures/Wallpaper so users get
-## a real selection out of the box (and can drop in their own files anytime).
-mkdir -p /etc/skel/Pictures/Wallpaper
-for wpdir in /usr/share/wallpapers/RakuOS-*/; do
-    wpimg=$(find "$wpdir" -path '*/contents/images/*.png' | head -n1)
-    if [ -n "$wpimg" ]; then
-        cp -n "$wpimg" "/etc/skel/Pictures/Wallpaper/$(basename "$wpdir").png"
-    fi
-done
-cp -n /usr/share/wallpapers/default.jpg /etc/skel/Pictures/Wallpaper/default.jpg || true
-
 ## Remove superseded packages
 rum remove -y wofi 2>/dev/null || true
+
 
 ## Rebuild desktop caches.
 ##
@@ -211,25 +200,12 @@ for _theme_dir in /usr/share/icons/*/; do
 done
 unset _theme _theme_dir
 
-## Point nautilus-open-any-terminal at the terminal we actually ship.
-##
-## The extension hardcodes terminal = "gnome-terminal" (nautilus_open_any_
-## terminal.py:153) and never probes whether that binary exists, so its
-## "Open in Terminal" entry dies with
-##   FileNotFoundError: [Errno 2] No such file or directory: 'gnome-terminal'
-## on any image without GNOME Terminal. This image ships kitty instead.
-##
-## Set in the dconf system database rather than /etc/skel: GLib's default
-## settings backend is dconf, which does not read a keyfile at
-## .config/glib-2.0/settings. A system default also covers existing users,
-## while a skeleton file would only reach accounts created afterwards.
-## Placed after glib-compile-schemas above, since the value is only readable
-## once the extension's schema is compiled.
-mkdir -p /etc/dconf/db/local.d
-cat > /etc/dconf/db/local.d/00-nautilus-open-any-terminal << 'EOF'
-[com/github/stunkymonkey/nautilus-open-any-terminal]
-terminal='kitty'
-EOF
+## Compile the dconf system database. The nautilus-open-any-terminal default
+## ships as a .d source file under system_files/etc/dconf/db/local.d/, copied
+## in before this script runs; a .d file is inert until dconf turns it into
+## the binary database, so this step is what actually makes the setting take
+## effect. Kept after glib-compile-schemas above, since the value is only
+## readable once that schema is compiled.
 dconf update 2>/dev/null || true
 
 ## Enable NTP: chrony keeps clock synced across reboots.
@@ -242,79 +218,9 @@ systemctl enable chronyd
 systemctl enable sddm
 systemctl enable --global dotfiles-setup
 
-## [NVIDIA dGPU pre-baked image] Mask dkms:
-## nvidia modules are pre-baked into the image for its exact kernel, so the
-## boot-time autoinstall always fails ("already installed, need --force").
-## Kernel updates come bundled with freshly compiled modules from the image CI,
-## so runtime dkms is never needed.
-## ► Devices without an NVIDIA dGPU may skip this block (safe to ignore).
-systemctl mask dkms.service 2>/dev/null || true
-
-## Disable grub-boot-success: it also ships a user-scope unit that fires 2min
-## after login and fails (grub2-set-bootflag needs root), spamming a failed
-## service notification every session. Mask system AND user scope.
-systemctl mask grub-boot-success.service grub-boot-success.timer 2>/dev/null || true
-mkdir -p /etc/systemd/user
-ln -sfn /dev/null /etc/systemd/user/grub-boot-success.service
-ln -sfn /dev/null /etc/systemd/user/grub-boot-success.timer
-
-## [This device — AMD+NVIDIA hybrid ASUS laptop] Disable fwupd:
-## the daemon hangs in D-state on this hardware, stalling boot ~3min and
-## ending in a failed unit. Firmware updates stay manual (menu/EFI).
-## ► Other devices: do NOT disable — fwupd works normally on other hardware.
-ln -sfn /dev/null /etc/systemd/system/fwupd.service
-ln -sfn /dev/null /etc/systemd/system/fwupd-refresh.service
-ln -sfn /dev/null /etc/systemd/system/fwupd-refresh.timer
-
-## Mask mcelog: mcelog userspace daemon does not support AMD (Zen) CPUs and
-## aborts at every boot ("mcelog: ERROR: AMD Processor family 23: mcelog does
-## not support this processor"), leaving a spurious failed unit. AMD MCE
-## decoding is handled in-kernel (edac_mce_amd) already, so this is cosmetic.
-## Relevant here: AMD Ryzen 7 4800H (Zen 2, ACPI family 17h reported as 23).
-## ► AMD-only device; Intel machines should keep mcelog enabled.
-systemctl mask mcelog.service 2>/dev/null || true
-
-## Power management: tuned (a plain tuner from the base image) is left in
-## place, but tuned-ppd — the layer that claimed the Power Profiles API — is
-## replaced by power-profiles-daemon above. Mask the base's tuned.service +
-## tuned-ppd.service so only one power manager owns CPU tuning and the PPD
-## D-Bus interface. Without the mask, tuned's default "balanced" profile
-## (governor + energy_performance_preference + platform_profile) would fight
-## power-profiles-daemon over the same sysfs knobs. tuned.service itself is
-## auto-enabled by the tuned package preset at install time, so it must be
-## masked here explicitly.
-systemctl mask tuned.service tuned-ppd.service 2>/dev/null || true
-
-## Quiet cosmetic systemd-tmpfiles noise on immutable systems:
-## - home.conf: /home and /srv are symlinks into /var here, so the Q/q rules
-##   log "/home already exists and is not a directory" every boot.
-## - root.conf: its `z / 555` rule tries to chmod /, which is a read-only
-##   composefs mount -> "fchmod() of / failed: Read-only file system".
-## - provision.conf: instead of masking it entirely, ship a trimmed copy that
-##   keeps the (credential-based) provisioning behavior but drops the `d- /root`
-##   line, which hits the /root -> /var/roothome symlink and logs "/root already
-##   exists and is not a directory" every boot.
-mkdir -p /etc/tmpfiles.d
-ln -sfn /dev/null /etc/tmpfiles.d/home.conf
-ln -sfn /dev/null /etc/tmpfiles.d/root.conf
-cat > /etc/tmpfiles.d/provision.conf << 'EOF'
-# Trimmed copy of /usr/lib/tmpfiles.d/provision.conf:
-# the `d- /root` line is dropped because /root is a symlink to /var/roothome
-# on this immutable system (would log "already exists and is not a directory").
-
-# Provision additional login messages from credentials, if they are set. Note
-# that these lines are NOPs if the credentials are not set or if the files
-# already exist.
-f^ /etc/motd.d/50-provision.conf - - - - login.motd
-f^ /etc/issue.d/50-provision.conf - - - - login.issue
-
-# Provision a /etc/hosts file from credentials.
-f^ /etc/hosts - - - - network.hosts
-
-# Provision SSH key for root
-d- /root/.ssh :0700 root :root -
-f^ /root/.ssh/authorized_keys :0600 root :root - ssh.authorized_keys.root
-EOF
+## Unit masks and tmpfiles overrides now ship as symlinks and static files
+## under system_files, copied in by Containerfile before this script runs.
+## Rationale for each is kept as a comment next to the symlink itself.
 
 ## [NVIDIA dGPU] Remove autostart entries that are noisy/failing at login:
 ## - nvidia-settings-load: --load-config-only (X11-only) intermittently
