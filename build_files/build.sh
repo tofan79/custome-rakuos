@@ -2,10 +2,9 @@
 
 set -ouex pipefail
 
-# Enable COPR for KineticWE and its Noctalia shell, plus the Hyprland COPR
-# that upstream KineticWE also uses.
-dnf -y copr enable mindset/Mindset-Apps
+# Enable COPR for Hyprland and Noctalia
 dnf -y copr enable lionheartp/Hyprland
+dnf -y copr enable mindset/Mindset-Apps
 
 # Pin COPRs at priority=20: below RakuOS repos (v4=5, v3=10), above defaults.
 # Matches RakuOS base's convention of editing repo files directly with sed.
@@ -17,6 +16,13 @@ for _copr_repo in "mindset:Mindset-Apps" "lionheartp:Hyprland"; do
     sed -i '/^priority=/d' "$_copr_file"
     sed -i '/^\[copr:copr.fedorainfracloud.org:'"$_copr_id"':'"$_copr_name"'\]/a priority=20' "$_copr_file"
 done
+
+# NOTE: rakuos-release-hyprland package not available yet in repos
+# When available, uncomment below:
+# RAKUOS_RELEASE_PKG="rakuos-release-hyprland"
+# if [ "${RAKUOS_STAGING:-0}" = "1" ]; then
+#     RAKUOS_RELEASE_PKG="rakuos-release-hyprland-staging"
+# fi
 
 # Terra ships disabled by default (third-party repos are opt-in), so enable
 # it here in case any packages below come from Terra. It stays enabled for the
@@ -42,17 +48,25 @@ ln -sfn /usr/bin/bash /usr/bin/sh 2>/dev/null || true
 rum install -y --refresh \
   cpio \
   nss-altfiles \
-  kineticwe-git \
-  kitty \
+  hyprland \
+  hyprland-guiutils \
+  gloview-git \
+  noctalia-git \
+  uwsm \
   pipewire \
   pipewire-alsa \
   pipewire-pulseaudio \
   wireplumber \
   xdg-desktop-portal \
+  xdg-desktop-portal-hyprland \
   xdg-desktop-portal-gtk \
   xdg-user-dirs-gtk \
   xorg-x11-server-Xwayland \
+  wl-clipboard \
   egl-wayland \
+  grim \
+  slurp \
+  wtype \
   fprintd-pam \
   adw-gtk3-theme \
   papirus-icon-theme \
@@ -63,14 +77,12 @@ rum install -y --refresh \
   gvfs-nfs \
   gvfs-smb \
   pavucontrol \
-  playerctl \
   NetworkManager-adsl \
   NetworkManager-bluetooth \
   NetworkManager-ppp \
   NetworkManager-wwan \
   nm-connection-editor \
   power-profiles-daemon \
-  brightnessctl \
   libnotify \
   sddm \
   sddm-x11 \
@@ -80,6 +92,7 @@ rum install -y --refresh \
   qt6ct \
   qt6-qtimageformats \
   systemd-oomd-defaults \
+  swash \
   zsh-autosuggestions \
   zsh-syntax-highlighting \
   eza \
@@ -97,7 +110,10 @@ rum install -y --refresh \
   tesseract-langpack-chi_tra \
   tesseract-langpack-chi_tra_vert \
   zbar \
-  wl-clipboard \
+  hyprpicker \
+  cliphist \
+  brightnessctl \
+  playerctl \
   nautilus \
   nautilus-open-any-terminal-git \
   nomacs \
@@ -166,26 +182,22 @@ for wpdir in /usr/share/wallpapers/RakuOS-*/; do
 done
 cp -n /usr/share/wallpapers/default.jpg /etc/skel/Pictures/Wallpaper/default.jpg || true
 
+## Remove superseded packages
+rum remove -y wofi 2>/dev/null || true
+
 ## Rebuild desktop caches.
 ##
-## Image ini tidak punya file trigger RPM sama sekali: /usr/lib/rpm/
-## file-triggers/ tidak ada dan tidak ada paket yang memiliki file di
-## bawahnya, jadi %post/%posttrans milik paket tidak pernah dipanggil.
-## Akibatnya semua cache yang biasanya di-refresh trigger tidak pernah
-## dibangun ulang setelah paket diinstal.
+## This image ships no RPM file triggers: /usr/lib/rpm/file-triggers/ does
+## not exist, so package %post/%posttrans never run and these caches are
+## never refreshed after install.
 ##
-## Gejalanya sudah nyata, bukan teoretis. /usr/share/glib-2.0/schemas/
-## gschemas.compiled bawaan base image bertanggal lebih tua daripada
-## nautilus-50.3 yang baru diinstal, sehingga nautilus crash saat start:
-##
+## Observed, not theoretical. The base image's gschemas.compiled is older
+## than nautilus-50.3, so nautilus aborts on startup with:
 ##   GLib-GIO-ERROR: Settings schema 'org.gnome.nautilus.preferences' is
 ##   not installed
-##   zsh: IOT instruction (core dumped)  nautilus
 ##
-## Jadi cache di bawah dibangun ulang satu kali di sini, setelah semua
-## paket selesai terpasang. gtk-update-icon-cache perlu dijalankan untuk
-## setiap theme yang benar-benar terpasang, karena cache per theme tidak
-## bisa dihitung untuk theme yang tidak ada.
+## Built once here, after all packages are in. Icon caches are per-theme, so
+## every installed theme needs its own.
 glib-compile-schemas /usr/share/glib-2.0/schemas || true
 update-desktop-database -q >/dev/null 2>&1 || true
 update-mime-database /usr/share/mime >/dev/null 2>&1 || true
