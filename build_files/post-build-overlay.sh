@@ -69,9 +69,12 @@ prebake_overlay_from_installroot() {
 
     rm -f "$installroot/usr/share/icons/default/index.theme"
 
-    ## Rebuild caches inside the installroot, before /usr is copied to the
-    ## overlay. Must be explicit: prebake runs with --nodeps/tsflags=noscripts,
-    ## so package scriptlets never run here at all.
+    ## Rebuild cache DI DALAM installroot, sebelum /usr-nya disalin ke overlay.
+    ## Ini wajib eksplisit: prebake memakai --nodeps/tsflags=noscripts (lihat
+    ## catatan di atas), jadi %post/%posttrans paket TIDAK PERNAH jalan di sini.
+    ## Kalau tidak, paket overlay yang memakai GSettings (dan desktop entries)
+    ## akan sampai ke users dengan cache yang belum dibangun — persis seperti
+    ## nautilus crash karena gschemas.compiled usang di rootfs utama.
     glib-compile-schemas "$installroot/usr/share/glib-2.0/schemas" 2>/dev/null || true
     update-desktop-database -q "$installroot/usr/share/applications" >/dev/null 2>&1 || true
     for _theme in "$installroot"/usr/share/icons/*/; do
@@ -161,27 +164,20 @@ rm -f "$STATE_FILE" "$DIRTY_FILE"
 sed -i -e '$a\' "$PACKAGES_LIST" 2>/dev/null || true
 
 cat >> /usr/share/rakuos/protected-packages.txt << 'PKGLIST'
-hyprland
-hyprland-guiutils
-gloview-git
-noctalia-git
+kineticwe-git
 rakuos-welcome-qt
 rakuos-system-qt
-uwsm
+rakuos-software-qt
+kitty
 pipewire
 pipewire-alsa
 pipewire-pulseaudio
 wireplumber
 xdg-desktop-portal
-xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-user-dirs-gtk
 xorg-x11-server-Xwayland
-wl-clipboard
 egl-wayland
-grim
-slurp
-wtype
 fprintd-pam
 adw-gtk3-theme
 cpio
@@ -194,12 +190,14 @@ gvfs-mtp
 gvfs-nfs
 gvfs-smb
 pavucontrol
+playerctl
 NetworkManager-adsl
 NetworkManager-bluetooth
 NetworkManager-ppp
 NetworkManager-wwan
 nm-connection-editor
 power-profiles-daemon
+brightnessctl
 libnotify
 sddm
 sddm-x11
@@ -209,7 +207,6 @@ qt6-qtsvg
 qt6ct
 qt6-qtimageformats
 systemd-oomd-defaults
-swash
 tesseract
 tesseract-langpack-eng
 tesseract-langpack-ind
@@ -226,11 +223,8 @@ zsh-autosuggestions
 zsh-syntax-highlighting
 eza
 fastfetch
+wl-clipboard
 starship
-hyprpicker
-cliphist
-brightnessctl
-playerctl
 nautilus
 nautilus-open-any-terminal-git
 nomacs
@@ -258,7 +252,7 @@ echo "[rakuos] Post-build seed complete."
 echo "Generating base file manifest..."
 /usr/libexec/rakuos/generate-base-manifest
 
-echo "Prebaking hyprland overlay payload..."
+echo "Prebaking KineticWE overlay payload..."
 prebake_overlay_from_installroot
 
 # Disable Terra again — build.sh only enabled it for the install steps above
