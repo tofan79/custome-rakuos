@@ -69,12 +69,9 @@ prebake_overlay_from_installroot() {
 
     rm -f "$installroot/usr/share/icons/default/index.theme"
 
-    ## Rebuild cache DI DALAM installroot, sebelum /usr-nya disalin ke overlay.
-    ## Ini wajib eksplisit: prebake memakai --nodeps/tsflags=noscripts (lihat
-    ## catatan di atas), jadi %post/%posttrans paket TIDAK PERNAH jalan di sini.
-    ## Kalau tidak, paket overlay yang memakai GSettings (dan desktop entries)
-    ## akan sampai ke users dengan cache yang belum dibangun — persis seperti
-    ## nautilus crash karena gschemas.compiled usang di rootfs utama.
+    ## Rebuild caches inside the installroot, before /usr is copied to the
+    ## overlay. Must be explicit: prebake runs with --nodeps/tsflags=noscripts,
+    ## so package scriptlets never run here at all.
     glib-compile-schemas "$installroot/usr/share/glib-2.0/schemas" 2>/dev/null || true
     update-desktop-database -q "$installroot/usr/share/applications" >/dev/null 2>&1 || true
     for _theme in "$installroot"/usr/share/icons/*/; do

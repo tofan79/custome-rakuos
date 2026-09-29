@@ -168,24 +168,17 @@ cp -n /usr/share/wallpapers/default.jpg /etc/skel/Pictures/Wallpaper/default.jpg
 
 ## Rebuild desktop caches.
 ##
-## Image ini tidak punya file trigger RPM sama sekali: /usr/lib/rpm/
-## file-triggers/ tidak ada dan tidak ada paket yang memiliki file di
-## bawahnya, jadi %post/%posttrans milik paket tidak pernah dipanggil.
-## Akibatnya semua cache yang biasanya di-refresh trigger tidak pernah
-## dibangun ulang setelah paket diinstal.
+## This image ships no RPM file triggers: /usr/lib/rpm/file-triggers/ does
+## not exist, so package %post/%posttrans never run and these caches are
+## never refreshed after install.
 ##
-## Gejalanya sudah nyata, bukan teoretis. /usr/share/glib-2.0/schemas/
-## gschemas.compiled bawaan base image bertanggal lebih tua daripada
-## nautilus-50.3 yang baru diinstal, sehingga nautilus crash saat start:
-##
+## Observed, not theoretical. The base image's gschemas.compiled is older
+## than nautilus-50.3, so nautilus aborts on startup with:
 ##   GLib-GIO-ERROR: Settings schema 'org.gnome.nautilus.preferences' is
 ##   not installed
-##   zsh: IOT instruction (core dumped)  nautilus
 ##
-## Jadi cache di bawah dibangun ulang satu kali di sini, setelah semua
-## paket selesai terpasang. gtk-update-icon-cache perlu dijalankan untuk
-## setiap theme yang benar-benar terpasang, karena cache per theme tidak
-## bisa dihitung untuk theme yang tidak ada.
+## Built once here, after all packages are in. Icon caches are per-theme, so
+## every installed theme needs its own.
 glib-compile-schemas /usr/share/glib-2.0/schemas || true
 update-desktop-database -q >/dev/null 2>&1 || true
 update-mime-database /usr/share/mime >/dev/null 2>&1 || true
