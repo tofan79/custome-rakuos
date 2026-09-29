@@ -72,7 +72,7 @@ hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?
 -- Browser, terminal, dan app lain ikut opacity global (active 0.9 / inactive 0.7).
 -- Fullscreen di-set 1.0 (opaque) biar main game tanpa transparan.
 
-hl.window_rule({ match = { class = "^(mpv|org.kde.haruna|.*plex.*|org\\.kde\\.gwenview|.*vlc.*|loupe|org.gnome.Loupe)$" }, opacity = "1.0 override" })
+hl.window_rule({ match = { class = "^(mpv|.*plex.*|.*vlc.*|loupe|org.gnome.Loupe)$" }, opacity = "1.0 override" })
 
 -- Float Utility Windows
 local floatApps = {
