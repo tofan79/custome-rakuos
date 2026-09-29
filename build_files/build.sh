@@ -185,6 +185,39 @@ cp -n /usr/share/wallpapers/default.jpg /etc/skel/Pictures/Wallpaper/default.jpg
 ## Remove superseded packages
 rum remove -y wofi 2>/dev/null || true
 
+## Rebuild desktop caches.
+##
+## Image ini tidak punya file trigger RPM sama sekali: /usr/lib/rpm/
+## file-triggers/ tidak ada dan tidak ada paket yang memiliki file di
+## bawahnya, jadi %post/%posttrans milik paket tidak pernah dipanggil.
+## Akibatnya semua cache yang biasanya di-refresh trigger tidak pernah
+## dibangun ulang setelah paket diinstal.
+##
+## Gejalanya sudah nyata, bukan teoretis. /usr/share/glib-2.0/schemas/
+## gschemas.compiled bawaan base image bertanggal lebih tua daripada
+## nautilus-50.3 yang baru diinstal, sehingga nautilus crash saat start:
+##
+##   GLib-GIO-ERROR: Settings schema 'org.gnome.nautilus.preferences' is
+##   not installed
+##   zsh: IOT instruction (core dumped)  nautilus
+##
+## Jadi cache di bawah dibangun ulang satu kali di sini, setelah semua
+## paket selesai terpasang. gtk-update-icon-cache perlu dijalankan untuk
+## setiap theme yang benar-benar terpasang, karena cache per theme tidak
+## bisa dihitung untuk theme yang tidak ada.
+glib-compile-schemas /usr/share/glib-2.0/schemas || true
+update-desktop-database -q >/dev/null 2>&1 || true
+update-mime-database /usr/share/mime >/dev/null 2>&1 || true
+for _theme in /usr/share/icons/hicolor /usr/share/icons/Adwaita; do
+    [ -f "$_theme/index.theme" ] && gtk-update-icon-cache -q -f -t "$_theme" >/dev/null 2>&1 || true
+done
+for _theme_dir in /usr/share/icons/*/; do
+    [ -f "${_theme_dir}index.theme" ] || continue
+    case "$_theme_dir" in */hicolor/*|*/Adwaita/*) continue ;; esac
+    gtk-update-icon-cache -q -f -t "${_theme_dir%/}" >/dev/null 2>&1 || true
+done
+unset _theme _theme_dir
+
 ## Enable NTP: chrony keeps clock synced across reboots.
 ## RTC is UTC (Windows already configured with RealTimeIsUniversal=1 in registry),
 ## so no need for timedatectl set-local-rtc — both OS agree on UTC.
