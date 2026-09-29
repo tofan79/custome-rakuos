@@ -69,6 +69,20 @@ prebake_overlay_from_installroot() {
 
     rm -f "$installroot/usr/share/icons/default/index.theme"
 
+    ## Rebuild cache DI DALAM installroot, sebelum /usr-nya disalin ke overlay.
+    ## Ini wajib eksplisit: prebake memakai --nodeps/tsflags=noscripts (lihat
+    ## catatan di atas), jadi %post/%posttrans paket TIDAK PERNAH jalan di sini.
+    ## Kalau tidak, paket overlay yang memakai GSettings (dan desktop entries)
+    ## akan sampai ke users dengan cache yang belum dibangun — persis seperti
+    ## nautilus crash karena gschemas.compiled usang di rootfs utama.
+    glib-compile-schemas "$installroot/usr/share/glib-2.0/schemas" 2>/dev/null || true
+    update-desktop-database -q "$installroot/usr/share/applications" >/dev/null 2>&1 || true
+    for _theme in "$installroot"/usr/share/icons/*/; do
+        [ -f "${_theme}index.theme" ] || continue
+        gtk-update-icon-cache -q -f -t "${_theme%/}" >/dev/null 2>&1 || true
+    done
+    unset _theme
+
     echo "[rakuos] Copying prebaked /usr payload into overlay upper..."
     if [[ ! -d "$installroot/usr" ]]; then
         echo "[rakuos] ERROR: prebake produced no /usr payload in $installroot" >&2
