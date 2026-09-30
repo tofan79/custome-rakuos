@@ -204,25 +204,12 @@ for _theme_dir in /usr/share/icons/*/; do
 done
 unset _theme _theme_dir
 
-## Point nautilus-open-any-terminal at the terminal we actually ship.
-##
-## The extension hardcodes terminal = "gnome-terminal" (nautilus_open_any_
-## terminal.py:153) and never probes whether that binary exists, so its
-## "Open in Terminal" entry dies with
-##   FileNotFoundError: [Errno 2] No such file or directory: 'gnome-terminal'
-## on any image without GNOME Terminal. This image ships kitty instead.
-##
-## Set in the dconf system database rather than /etc/skel: GLib's default
-## settings backend is dconf, which does not read a keyfile at
-## .config/glib-2.0/settings. A system default also covers existing users,
-## while a skeleton file would only reach accounts created afterwards.
-## Placed after glib-compile-schemas above, since the value is only readable
-## once the extension's schema is compiled.
-mkdir -p /etc/dconf/db/local.d
-cat > /etc/dconf/db/local.d/00-nautilus-open-any-terminal << 'EOF'
-[com/github/stunkymonkey/nautilus-open-any-terminal]
-terminal='kitty'
-EOF
+## Compile the dconf system database. The nautilus-open-any-terminal default
+## ships as a .d source file under system_files/etc/dconf/db/local.d/, copied
+## in before this script runs; a .d file is inert until dconf turns it into
+## the binary database, so this step is what actually makes the setting take
+## effect. Kept after glib-compile-schemas above, since the value is only
+## readable once that schema is compiled.
 dconf update 2>/dev/null || true
 
 ## Enable NTP: chrony keeps clock synced across reboots.
@@ -290,29 +277,8 @@ systemctl mask tuned.service tuned-ppd.service 2>/dev/null || true
 mkdir -p /etc/tmpfiles.d
 ln -sfn /dev/null /etc/tmpfiles.d/home.conf
 ln -sfn /dev/null /etc/tmpfiles.d/root.conf
-cat > /etc/tmpfiles.d/provision.conf << 'EOF'
-# Trimmed copy of /usr/lib/tmpfiles.d/provision.conf:
-# the `d- /root` line is dropped because /root is a symlink to /var/roothome
-# on this immutable system (would log "already exists and is not a directory").
-
-# Provision additional login messages from credentials, if they are set. Note
-# that these lines are NOPs if the credentials are not set or if the files
-# already exist.
-f^ /etc/motd.d/50-provision.conf - - - - login.motd
-f^ /etc/issue.d/50-provision.conf - - - - login.issue
-
-# Provision a /etc/hosts file from credentials.
-f^ /etc/hosts - - - - network.hosts
-
-# Provision SSH key for root
-d- /root/.ssh :0700 root :root -
-f^ /root/.ssh/authorized_keys :0600 root :root - ssh.authorized_keys.root
-EOF
 
 ## [NVIDIA dGPU] Remove autostart entries that are noisy/failing at login:
 ## - nvidia-settings-load: --load-config-only (X11-only) intermittently
 ## ► AMD-only devices: this file does not exist, rm -f is a no-op (safe).
 rm -f /etc/xdg/autostart/nvidia-settings-load.desktop 2>/dev/null || true
-
-## Create flatpak exports dir (fix rakuos-flatpak-watcher)
-mkdir -p /var/lib/flatpak/exports/bin
