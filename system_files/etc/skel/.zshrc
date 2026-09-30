@@ -44,22 +44,13 @@ alias op='opencode'
 alias yz='yazi'
 alias nv='nvim'
 
-# --- DaVinci Resolve installer ---
-export DAVINCI="$HOME/Projects/davinci-resolve/install.sh"
-alias i-davinci='$DAVINCI install'
-alias r-davinci='$DAVINCI remove'
-alias f-davinci='$DAVINCI fix'
-alias u-davinci='$DAVINCI update'
-alias s-davinci='$DAVINCI status'
-alias d-davinci='$DAVINCI download'
-
-# --- Docker / Podman ---
-alias d='docker'
-alias dps='docker ps'
-alias dpa='docker ps -a'
-alias di='docker images'
-alias dex='docker exec -it'
-alias dlog='docker logs -f'
+# --- Podman ---
+alias d='Podman'
+alias dps='Podman ps'
+alias dpa='Podman ps -a'
+alias di='Podman images'
+alias dex='Podman exec -it'
+alias dlog='Podman logs -f'
 
 # --- RakuOS (rum) ---
 alias update='sudo rum system-upgrade'
