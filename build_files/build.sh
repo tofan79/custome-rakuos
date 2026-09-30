@@ -117,10 +117,16 @@ rum install -y --refresh \
 
 
 
-## Remove superseded packages
+## Kitty is replaced by ghostty, and wofi is used by neither Noctalia nor the
+## Noctalia Greeter. kitty-terminfo goes with it: skel exports TERM=xterm-ghostty,
+## so leaving it behind only ships a terminal type nothing references.
 rum remove -y wofi kitty kitty-kitten kitty-shell-integration kitty-terminfo 2>/dev/null || true
 
 
+## Rebuild derived caches. /usr/lib/rpm/file-triggers is absent in this image, so
+## no trigger ever fires and nothing else builds these. Without gschemas.compiled
+## Nautilus aborts at startup (commit 98be7cb); || true throughout so a cache miss
+## degrades the image but never fails the build.
 glib-compile-schemas /usr/share/glib-2.0/schemas || true
 update-desktop-database -q >/dev/null 2>&1 || true
 update-mime-database /usr/share/mime >/dev/null 2>&1 || true
@@ -128,37 +134,21 @@ for d in /usr/share/icons/*/; do [ -f "${d}index.theme" ] && gtk-update-icon-cac
 dconf update 2>/dev/null || true
 
 
-## Enable NTP: chrony keeps clock synced across reboots.
-## RTC is UTC (Windows already configured with RealTimeIsUniversal=1 in registry),
-## so no need for timedatectl set-local-rtc — both OS agree on UTC.
+## NTP so the clock stays synced across reboots. RTC is UTC on both sides already
+## (Windows has RealTimeIsUniversal=1), so no timedatectl set-local-rtc needed.
 rum install -y chrony
 systemctl enable chronyd
 
 
-## Unlock keyring on login
-## Kept verbatim from rakuos-niri/build_files/build.sh. It is currently a no-op:
-## the base no longer ships a commented-out pam_gnome_keyring line in
-## /etc/pam.d/greetd (only pam_kwallet is commented there), so the pattern
-## matches nothing. Kept anyway for parity with the official image and in case a
-## future base re-comments it — sed exits 0 either way, so it cannot break the
-## build.
+## Uncomment pam_gnome_keyring in greetd's PAM stack. Currently a no-op: the base only
+## ships pam_kwallet commented there, so the pattern matches nothing and sed exits 0.
+## Kept for parity with the official image in case a future base re-comments it.
 sed -i -E 's/^-([a-z]+[[:space:]]+.*pam_gnome_keyring\.so)/\1/' /etc/pam.d/greetd
 
-## Noctalia greeter (greetd)
-##
-## The greeter account has to exist before setup_greeter_system.sh runs. The base
-## image does not ship one, and the script has no fallback: it logs
-## "user 'greeter' does not exist yet; skipping path chown", then
-## noctalia-greeter-apply-appearance --setup-system dies with
-## "[ERR] [apply-appearance] account 'greeter' does not exist" and takes the
-## whole RUN step down with it. greetd drops the login session to this account,
-## so it has to be a real, unprivileged system user.
-##
-## uid/gid are left to useradd/systemd conventions rather than pinned: they only
-## have to be stable within the image, and pinning them would collide with the
-## base's allocation range the moment a new package claims 958. Home matches the
-## account the official niri image ends up with (/var/lib/greeter) so the state
-## dir and the greeter home do not disagree.
+## Noctalia Greeter setup. The greeter account must exist first or
+## noctalia-greeter-apply-appearance --setup-system aborts the whole RUN step.
+## uid/gid are left to useradd so they cannot collide with the base's range, and
+## -m is omitted because setup_greeter_system.sh creates and owns /var/lib/greeter.
 if ! getent passwd greeter >/dev/null; then
     useradd \
         --system \
@@ -167,29 +157,17 @@ if ! getent passwd greeter >/dev/null; then
         --comment "System Greeter" \
         greeter
 fi
-## useradd -m is deliberately not used: setup_greeter_system.sh creates
-## /var/lib/greeter itself and wants to own it, so pre-creating the home here
-## would just fight it over the ownership.
-
-## system_files/etc/greetd/config.toml holds the greetd config and is already in
-## place: the Containerfile COPYs system_files before this script runs. What
-## cannot be a file is done here by the setup script the package ships:
-##   - inserts `session required pam_systemd.so` into /etc/pam.d/greetd, without
-##     which logind never creates a session/seat for the greeter's nested wlroots
-##     compositor and the login screen misbehaves;
-##   - creates /var/lib/noctalia-greeter (0750, owned by greeter) for the
-##     wallpaper/palette sync;
-##   - installs greeter.toml plus the polkit action for the appearance tool.
-## The package ships no tmpfiles.d drop-in, so the portable ensure_greeter_paths
-## path inside the script is what actually creates the state dir.
+## system_files/etc/greetd/config.toml is already in place (Containerfile COPYs
+## system_files first). What the shipped script adds: pam_systemd.so in
+## /etc/pam.d/greetd, else logind never makes a session/seat for the greeter's
+## nested wlroots compositor; /var/lib/noctalia-greeter (0750, greeter:greeter);
 /usr/share/noctalia-greeter/setup_greeter_system.sh
 
 ## The script keeps a timestamped copy of the PAM file. Drop it so the backup
 ## does not ship inside the image.
 rm -f /etc/pam.d/greetd.bak.noctalia.*
 
-## Enable Services
-## tuned/tuned-ppd are not enabled explicitly: /usr/lib/systemd/system-preset/
-## 90-default.preset enables both, same as on the niri image.
+## tuned/tuned-ppd need no explicit enable: 90-default.preset already enables both,
+## same as on the niri image.
 systemctl enable greetd
 systemctl enable --global dotfiles-setup
