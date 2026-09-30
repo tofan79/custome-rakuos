@@ -54,3 +54,17 @@ TryExec=uwsm
 DesktopNames=Hyprland
 Type=Application
 EOF
+
+# Drop the nvidia-settings X11 autostart.
+# /etc/xdg/autostart/nvidia-settings-load.desktop ships with the
+# nvidia-settings RPM and runs:
+#   sh -c "[ -e /dev/nvidia0 ] && exec /usr/bin/nvidia-settings --load-config-only"
+# It has no OnlyShowIn/NotShowIn guard, so it fires on every login. Its only
+# purpose is preloading ~/.nvidia-settings-rc for an X11 session, and this image
+# has no X11 session (/usr/share/xsessions is empty — SDDM was replaced by
+# greetd). On a hybrid laptop /dev/nvidia0 still exists, so the guard passes and
+# nvidia-settings — an X11/GTK tool — then exits 1 under Wayland, leaving
+# app-nvidia\x2dsettings\x2dload@autostart.service failed in `systemctl --user`
+# on every single login. Pure noise with nothing reading its output.
+# Reappears if the nvidia-settings RPM is upgraded or reinstalled.
+rm -f /etc/xdg/autostart/nvidia-settings-load.desktop

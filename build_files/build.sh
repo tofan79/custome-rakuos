@@ -31,13 +31,16 @@ done
 rum config-manager --set-enabled terra
 
 ## Install packages
-## nss-altfiles is NOT installed here on purpose. The base references the
-## "altfiles" NSS service in /etc/nsswitch.conf and ships /usr/lib/group, but
-## installing the module puts it in /usr, where initrd (before /usr is mounted)
-## cannot see it, so the ~45 "Failed to resolve group" warnings per boot come
-## back. post-build-overlay.sh instead bakes the groups straight into /etc/group
-## and lists nss-altfiles in protected-packages.txt so the overlay never
-## shadows it.
+## nss-altfiles IS installed here. The base references the "altfiles" NSS service
+## in /etc/nsswitch.conf and ships /usr/lib/group, but the base image has no
+## libnss_altfiles.so to back that source, so the reference is dead until this
+## module is present. With it, /usr/lib/group is merged into group lookups and
+## the groups that live only there resolve.
+##
+## The module lives in /usr, which is not mounted yet during initrd, so it cannot
+## help the early boot phase. post-build-overlay.sh covers that separately by
+## baking the same groups into BOTH /etc/group and /usr/lib/group, and it lists
+## nss-altfiles in protected-packages.txt so the overlay never shadows it.
 rum install -y --refresh \
   cpio \
   nss-altfiles \

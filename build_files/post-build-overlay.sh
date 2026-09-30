@@ -143,9 +143,12 @@ fi
 # /etc/" step, otherwise that copy overwrites whatever we appended. Calling it
 # from the bottom of this script satisfies that.
 bake_system_groups() {
-    local group gid
+    local group gid target
     for group in audio video input disk tty kvm render lp clock kmem sgx utmp plugdev; do
-        grep -q "^${group}:" /etc/group && continue
+        # Both databases already have it — nothing to do.
+        if grep -q "^${group}:" /etc/group && grep -q "^${group}:" /usr/lib/group; then
+            continue
+        fi
         case "$group" in
             audio) gid=63 ;;
             video) gid=39 ;;
@@ -169,8 +172,25 @@ bake_system_groups() {
             *) gid=$(getent group "$group" 2>/dev/null | awk -F: '{print $3}' || true) ;;
         esac
         if [ -n "$gid" ]; then
-            echo "${group}:x:${gid}:" >> /etc/group
-            echo "[rakuos] Baked group ${group} (gid ${gid}) into /etc/group."
+            # Write to BOTH databases, each guarded independently.
+            #
+            # /etc/group alone is not enough: in the build container /etc resolves
+            # to /usr/etc, so an append there lands in /usr/etc/group instead —
+            # and at runtime the deployed /etc/group is a *different* file, so the
+            # group never becomes visible. That is exactly how plugdev went
+            # missing while every other group resolved (the other 12 are shipped
+            # by Fedora and present in both files already).
+            #
+            # /usr/lib/group is the altfiles NSS database that nsswitch.conf
+            # reads, it always lives in /usr so it is guaranteed to ship in the
+            # image, and appending there is idempotent. Between the two, the
+            # group resolves both during initrd (via /etc) and after /usr is
+            # mounted (via altfiles).
+            for target in /etc/group /usr/lib/group; do
+                [ -f "$target" ] || continue
+                grep -q "^${group}:" "$target" || echo "${group}:x:${gid}:" >> "$target"
+            done
+            echo "[rakuos] Baked group ${group} (gid ${gid}) into /etc/group + /usr/lib/group."
         else
             groupadd -r "$group" 2>/dev/null || true
             echo "[rakuos] WARNING: no gid for ${group}; fell back to groupadd." >&2
