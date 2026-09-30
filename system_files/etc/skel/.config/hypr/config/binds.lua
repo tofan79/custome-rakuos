@@ -9,11 +9,9 @@ local launchPrefix = "uwsm app -- " -- if you are not using UWSM, make this empt
 -- Core
 -- ───────────────────────────────────────────
 hl.bind(M .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload && notify-send -u low 'Hyprland reloaded'"), { description = "Reload Hyprland config" })
-hl.bind(M .. " + SHIFT + K", hl.dsp.exec_cmd("noctalia msg panel-toggle kenn/keybind-cheatsheet:cheatsheet"), { description = "Show keybindings" })
 hl.bind(M .. " + Q", hl.dsp.window.close(), { description = "Close active window" })
 hl.bind(M .. " + Escape", hl.dsp.exec_cmd("noctalia msg panel-toggle session"), { description = "Session menu" })
 hl.bind(M .. " + CTRL + L", hl.dsp.exec_cmd("noctalia msg session lock"), { description = "Lock screen" })
-hl.bind(M .. " + slash", hl.dsp.exec_cmd("noctalia msg panel-toggle tordex/nvtop:panel -mem"), { description = "System monitor (procmon)" })
 hl.bind("CTRL + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL .. " --title=btop-monitor -e btop"), { description = "System monitor (btop, floating)" })
 
 -- ───────────────────────────────────────────
@@ -26,12 +24,7 @@ hl.bind(M .. " + CTRL + W", hl.dsp.exec_cmd("noctalia msg panel-toggle wallpaper
 hl.bind(M .. " + CTRL + period", hl.dsp.exec_cmd("noctalia msg notification-clear-history"),{ description = "Clear notifications" })
 hl.bind(M .. " + CTRL + comma", hl.dsp.exec_cmd("noctalia msg clipboard-clear"), { description = "Clear clipboard" })
 hl.bind(M .. " + CTRL + C", hl.dsp.exec_cmd("noctalia msg caffeine-toggle"), { description = "Toggle caffeine" })
-hl.bind(M .. " + CTRL + slash",hl.dsp.exec_cmd("noctalia msg panel-toggle noctalia/wallhaven:browser"), { description = "Wallhaven wallpaper" })
-hl.bind(M .. " + CTRL + backslash", hl.dsp.exec_cmd("noctalia msg panel-toggle nomadcxx/gslapper:picker"),{ description = "Video wallpaper" })
 hl.bind(M .. " + ALT + P", hl.dsp.exec_cmd("hyprpicker -a -n"), { description = "Color picker (hyprpicker)" })
-hl.bind(M .. " + ALT + period", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher /emo"), { description = "Emoji panel" })
-hl.bind(M .. " + SHIFT + B", hl.dsp.exec_cmd("noctalia msg plugin nomadcxx/gamer-mode:service all toggle"), { description = "Toggle gamer mode" })
-hl.bind(M .. " + CTRL + R", hl.dsp.exec_cmd("noctalia msg panel-toggle mindset/today-reminders:main"), { description = "Today Reminders panel" })
 
 -- ───────────────────────────────────────────
 -- Window Focus (Super + Arrows)
@@ -90,11 +83,6 @@ hl.bind(M .. " + SHIFT + Tab", hl.dsp.group.prev(), { description = "Group prev"
 for i = 1, 9 do
 	hl.bind(M .. " + CTRL + " .. i, hl.dsp.group.active({ index = i }), { description = "Group index " .. i })
 end
-
--- ───────────────────────────────────────────
--- Toggle Animations
--- ───────────────────────────────────────────
-hl.bind(M .. " + ALT + A", hl.dsp.exec_cmd("noctalia msg panel-toggle mindset/hypr-animations:panel"), { description = "Switch animation preset (panel)" })
 
 -- ───────────────────────────────────────────
 -- Scratchpad
@@ -167,11 +155,6 @@ hl.bind(M .. " + Return", hl.dsp.exec_cmd(launchPrefix .. TERMINAL), { descripti
 hl.bind(M .. " + E", hl.dsp.exec_cmd(launchPrefix .. FILE_MANAGER), { description = "File manager" })
 hl.bind(M .. " + B", hl.dsp.exec_cmd(launchPrefix .. BROWSER), { description = "Browser (Zen)" })
 hl.bind(M .. " + N", hl.dsp.exec_cmd(launchPrefix .. EDITOR), { description = "Editor" })
-hl.bind(M .. " + T", hl.dsp.exec_cmd("Telegram"), { description = "Telegram" })
-hl.bind(M .. " + W", hl.dsp.exec_cmd("flatpak run io.github.tobagin.karere"), { description = "Karere" })
-hl.bind(M .. " + D", hl.dsp.exec_cmd("vesktop"), { description = "Vesktop (Discord)" })
-hl.bind(M .. " + G", hl.dsp.exec_cmd("steam"), { description = "Steam" })
-hl.bind(M .. " + U", hl.dsp.exec_cmd("/opt/abdownloadmanager/bin/ABDownloadManager"), { description = "AB Download Manager" })
 
 -- ───────────────────────────────────────────
 -- Screenshot & Screen Tools
