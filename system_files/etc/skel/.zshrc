@@ -45,12 +45,12 @@ alias yz='yazi'
 alias nv='nvim'
 
 # --- Podman ---
-alias d='Podman'
-alias dps='Podman ps'
-alias dpa='Podman ps -a'
-alias di='Podman images'
-alias dex='Podman exec -it'
-alias dlog='Podman logs -f'
+alias d='podman'
+alias dps='podman ps'
+alias dpa='podman ps -a'
+alias di='podman images'
+alias dex='podman exec -it'
+alias dlog='podman logs -f'
 
 # --- RakuOS (rum) ---
 alias update='sudo rum system-upgrade'
