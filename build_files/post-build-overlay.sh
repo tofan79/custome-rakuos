@@ -249,7 +249,6 @@ qt6-qt5compat
 qt6-qtsvg
 qt6-qtimageformats
 qt6ct
-qt6ct-kde
 systemd-oomd-defaults
 chrony
 swash

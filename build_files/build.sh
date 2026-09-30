@@ -88,7 +88,6 @@ rum install -y --refresh \
   qt6-qt5compat \
   qt6-qtsvg \
   qt6ct \
-  qt6ct-kde \
   qt6-qtimageformats \
   systemd-oomd-defaults \
   swash \
