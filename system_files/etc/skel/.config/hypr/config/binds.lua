@@ -203,9 +203,13 @@ hl.bind(M .. " + code:86", function() zoomfunction(0.3) end, { repeating = true,
 
 -- ───────────────────────────────────────────
 -- GloView (Mission Control overview)
--- ───────────────────────────────────────────
-if hl.plugin.gloview then
-    hl.bind(M .. " + SHIFT + O", hl.plugin.gloview.toggle, { description = "Toggle overview" })
-    hl.bind(M .. " + ALT + O", hl.plugin.gloview.desktop, { description = "Desktop mode" })
-    hl.bind(M .. " + CTRL + O", hl.plugin.gloview.allworkspaces, { description = "All workspaces" })
-end
+--
+-- Disabled while the plugin's repo is not ready; gloview-git is out of the
+-- package list. hyprland.lua has the matching hl.plugin.load commented out.
+-- The guard was already here, so this block going dark costs nothing -- it
+-- simply registers nothing once hl.plugin.gloview is absent.
+-- if hl.plugin.gloview then
+--     hl.bind(M .. " + SHIFT + O", hl.plugin.gloview.toggle, { description = "Toggle overview" })
+--     hl.bind(M .. " + ALT + O", hl.plugin.gloview.desktop, { description = "Desktop mode" })
+--     hl.bind(M .. " + CTRL + O", hl.plugin.gloview.allworkspaces, { description = "All workspaces" })
+-- end

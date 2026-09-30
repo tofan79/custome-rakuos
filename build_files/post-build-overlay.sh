@@ -218,7 +218,6 @@ hyprland-guiutils
 uwsm
 noctalia-git
 noctalia-greeter-git
-gloview-git
 rakuos-welcome-qt
 rakuos-system-qt
 rakuos-software-qt
@@ -246,7 +245,6 @@ fprintd-pam
 gnome-keyring
 gnome-keyring-pam
 adw-gtk3-theme
-papirus-icon-theme
 bibata-cursor-theme
 jetbrainsmono-nerd-fonts
 cpio

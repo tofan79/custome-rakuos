@@ -4,7 +4,8 @@ Name=noctalia
 TerminalApplication=ghostty
 
 [Icons]
-Theme=Colloid-Dracula
+# See gtk-3.0/settings.ini for why this is Colloid-Dark and not the Dracula variant.
+Theme=Colloid-Dark
 
 [KDE]
 cursorSize=24

@@ -46,73 +46,71 @@ rum install -y --refresh \
   nss-altfiles \
   hyprland \
   hyprland-guiutils \
-  gloview-git \
+  uwsm \
+  xorg-x11-server-Xwayland \
+  egl-wayland \
+  hyprpicker \
+  grim \
+  slurp \
+  wtype \
+  wl-clipboard \
   noctalia-git \
   noctalia-greeter-git \
-  ghostty \
-  ghostty-nautilus \
-  ghostty-kio \
-  uwsm \
-  pipewire \
-  pipewire-alsa \
-  pipewire-pulseaudio \
-  wireplumber \
   xdg-desktop-portal \
   xdg-desktop-portal-hyprland \
   xdg-desktop-portal-gtk \
   xdg-user-dirs-gtk \
-  xorg-x11-server-Xwayland \
-  wl-clipboard \
-  egl-wayland \
-  grim \
-  slurp \
-  wtype \
-  cava \
-  tuned \
-  tuned-ppd \
-  fprintd-pam \
-  adw-gtk3-theme \
-  papirus-icon-theme \
-  bibata-cursor-theme \
+  ghostty \
+  ghostty-nautilus \
+  ghostty-kio \
   jetbrainsmono-nerd-fonts \
-  gvfs \
-  gvfs-mtp \
-  gvfs-nfs \
-  gvfs-smb \
+  zsh-autosuggestions \
+  zsh-syntax-highlighting \
+  eza \
+  bat \
+  fzf \
+  zoxide \
+  fastfetch \
+  starship \
+  swash \
+  cliphist \
+  cava \
   pavucontrol \
-  gnome-calculator \
+  pipewire \
+  pipewire-alsa \
+  pipewire-pulseaudio \
+  wireplumber \
   NetworkManager-adsl \
   NetworkManager-bluetooth \
   NetworkManager-ppp \
   NetworkManager-wwan \
   nm-connection-editor \
-  libnotify \
+  tuned \
+  tuned-ppd \
+  gnome-keyring \
+  gnome-keyring-pam \
+  fprintd-pam \
+  adw-gtk3-theme \
+  bibata-cursor-theme \
+  gvfs \
+  gvfs-mtp \
+  gvfs-nfs \
+  gvfs-smb \
   qt6-qtdeclarative \
   qt6-qt5compat \
   qt6-qtsvg \
   qt6ct \
   qt6-qtimageformats \
+  libnotify \
   systemd-oomd-defaults \
-  swash \
-  zsh-autosuggestions \
-  zsh-syntax-highlighting \
-  eza \
-  fastfetch \
-  starship \
+  gnome-calculator \
+  nautilus \
+  nomacs \
+  cups-pk-helper \
   tesseract \
   tesseract-langpack-eng \
   tesseract-langpack-ind \
   zbar \
-  hyprpicker \
-  gnome-keyring \
-  gnome-keyring-pam \
-  cliphist \
-  nautilus \
-  cups-pk-helper \
-  nomacs \
-  bat \
-  fzf \
-  zoxide \
   rakuos-welcome-qt \
   rakuos-system-qt \
   rakuos-software-qt
