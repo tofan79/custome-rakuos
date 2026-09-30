@@ -175,18 +175,6 @@ done
 systemctl mask nvidia-powerd.service 2>/dev/null || true
 systemctl mask nvidia-persistenced.service 2>/dev/null || true
 
-## Populate skeleton wallpaper folder with the OFFICIAL base RakuOS wallpaper
-## set. Noctalia's wallpaper picker points at ~/Pictures/Wallpaper so users get
-## a real selection out of the box (and can drop in their own files anytime).
-mkdir -p /etc/skel/Pictures/Wallpaper
-for wpdir in /usr/share/wallpapers/RakuOS-*/; do
-    wpimg=$(find "$wpdir" -path '*/contents/images/*.png' | head -n1)
-    if [ -n "$wpimg" ]; then
-        cp -n "$wpimg" "/etc/skel/Pictures/Wallpaper/$(basename "$wpdir").png"
-    fi
-done
-cp -n /usr/share/wallpapers/default.jpg /etc/skel/Pictures/Wallpaper/default.jpg || true
-
 ## Remove superseded packages
 rum remove -y wofi 2>/dev/null || true
 
