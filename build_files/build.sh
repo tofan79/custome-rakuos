@@ -144,6 +144,32 @@ systemctl enable chronyd
 sed -i -E 's/^-([a-z]+[[:space:]]+.*pam_gnome_keyring\.so)/\1/' /etc/pam.d/greetd
 
 ## Noctalia greeter (greetd)
+##
+## The greeter account has to exist before setup_greeter_system.sh runs. The base
+## image does not ship one, and the script has no fallback: it logs
+## "user 'greeter' does not exist yet; skipping path chown", then
+## noctalia-greeter-apply-appearance --setup-system dies with
+## "[ERR] [apply-appearance] account 'greeter' does not exist" and takes the
+## whole RUN step down with it. greetd drops the login session to this account,
+## so it has to be a real, unprivileged system user.
+##
+## uid/gid are left to useradd/systemd conventions rather than pinned: they only
+## have to be stable within the image, and pinning them would collide with the
+## base's allocation range the moment a new package claims 958. Home matches the
+## account the official niri image ends up with (/var/lib/greeter) so the state
+## dir and the greeter home do not disagree.
+if ! getent passwd greeter >/dev/null; then
+    useradd \
+        --system \
+        --home-dir /var/lib/greeter \
+        --shell /bin/bash \
+        --comment "System Greeter" \
+        greeter
+fi
+## useradd -m is deliberately not used: setup_greeter_system.sh creates
+## /var/lib/greeter itself and wants to own it, so pre-creating the home here
+## would just fight it over the ownership.
+
 ## system_files/etc/greetd/config.toml holds the greetd config and is already in
 ## place: the Containerfile COPYs system_files before this script runs. What
 ## cannot be a file is done here by the setup script the package ships:
