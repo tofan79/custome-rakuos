@@ -1,34 +1,34 @@
 export BROWSER=firefox
+
 # ghostty's terminfo (x/xterm-ghostty) is already in the base image. kitty's is
 # not: build.sh removes kitty-terminfo, so xterm-kitty would leave every
 # ncurses/TUI app (btop, htop, lazygit) with an unknown terminal type.
 export TERM=xterm-ghostty
 
-# XDG / Session
-export XDG_CURRENT_DESKTOP=Hyprland
-export XDG_SESSION_DESKTOP=Hyprland
-export XDG_SESSION_TYPE=wayland
-
 # Toolkit / Qt / Cursor
+# No icon theme variable here on purpose: gtk-3.0/settings.ini, gtk-4.0/settings.ini,
+# kdeglobals [Icons] and qt6ct.conf all pin Colloid-Dracula, which ships with
+# rakuos-branding in the base image. Setting it here as well would only create a
+# second place to keep in sync.
 export QT_QPA_PLATFORM="wayland;xcb"
 export QT_QPA_PLATFORMTHEME=qt6ct
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export ELECTRON_OZONE_PLATFORM_HINT=auto
 export XCURSOR_THEME=Bibata-Modern-Ice
 export XCURSOR_SIZE=24
 export HYPRCURSOR_THEME=Bibata-Modern-Ice
 export HYPRCURSOR_SIZE=24
-export GDK_BACKEND="wayland,x11"
-export SDL_VIDEODRIVER="wayland,x11,windows"
-export CLUTTER_BACKEND=wayland
-export ELECTRON_OZONE_PLATFORM_HINT=auto
-export GSK_RENDERER=gl
 
-# GPU Hybrid — Default: AMD iGPU (hemat daya)
-# Render default lewat AMD. NVIDIA hanya untuk app yg dijalankan dgn offload.
-export LIBVA_DRIVER_NAME=radeonsi          # video decode di AMD iGPU (tetap aktif)
-# export __GLX_VENDOR_LIBRARY_NAME=nvidia   # OFF (default AMD)
-# export GBM_BACKEND=nvidia-drm             # OFF (default AMD)
-# export __NV_PRIME_RENDER_OFFLOAD=1        # OFF (default AMD)
-# export __VK_LAYER_NV_optimus=NVIDIA_only  # OFF (default AMD)
-export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
+# GPU — left unset so Mesa/DRM picks the right driver per machine. Forcing
+# LIBVA_DRIVER_NAME=radeonsi here breaks VA-API on Intel (no such driver) and on
+# NVIDIA-only desktops, and forcing GBM_BACKEND=nvidia-drm would move the whole
+# session off the iGPU and cost battery on hybrid laptops.
+# PRIME offload for individual apps is handled by /usr/bin/nvidiarun, which sets
+# the variables below per-process instead of session-wide.
+# Uncomment only what your machine actually needs:
+# export __GLX_VENDOR_LIBRARY_NAME=nvidia   # NVIDIA GL
+# export GBM_BACKEND=nvidia-drm             # NVIDIA GBM
+# export __NV_PRIME_RENDER_OFFLOAD=1        # NVIDIA PRIME offload
+# export __VK_LAYER_NV_optimus=NVIDIA_only  # NVIDIA explicit layers
+# export __GL_GSYNC_ALLOWED=1               # G-Sync / VRR
+# export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0  # keep game window focused
