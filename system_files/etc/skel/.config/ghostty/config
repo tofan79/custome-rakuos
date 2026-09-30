@@ -1,0 +1,47 @@
+theme = noctalia
+
+# ===== FONT =====
+font-family = "JetBrainsMono Nerd Font"
+font-size = 11
+font-feature = +liga, +calt
+
+# ===== WINDOW =====
+window-padding-x = 6
+window-padding-y = 4
+window-decoration = false
+background-opacity = 0.75
+window-theme = dark
+
+# ===== CURSOR =====
+cursor-style = bar
+cursor-style-blink = true
+cursor-click-to-move = true
+
+# ===== SCROLLBACK & SEARCH =====
+scrollback-limit = 100000
+mouse-hide-while-typing = true
+
+# ===== SHELL INTEGRATION =====
+shell-integration = detect
+
+# ===== MISC QOL =====
+copy-on-select = clipboard
+confirm-close-surface = false
+# Single instance so every launcher in Noctalia, the launcher and the binds
+# reuses the running terminal instead of spawning a fresh window each time.
+gtk-single-instance = true
+
+# ===== SPLIT & TAB =====
+# ctrl+shift is deliberate: Hyprland already binds ctrl+shift to the arrow keys
+# and Escape (window moves, btop), and ctrl+1..5 to workspaces. Using bare ctrl
+# here would shadow them, because the terminal sees the key first when it has
+# focus. Letters and digits are therefore chosen to stay clear of both sets.
+keybind = ctrl+shift+d=new_split:right
+keybind = ctrl+shift+e=new_split:down
+keybind = ctrl+shift+w=close_surface
+keybind = ctrl+shift+t=new_tab
+keybind = ctrl+shift+1=goto_tab:1
+keybind = ctrl+shift+2=goto_tab:2
+keybind = ctrl+shift+3=goto_tab:3
+keybind = ctrl+shift+4=goto_tab:4
+keybind = ctrl+shift+5=goto_tab:5

@@ -1,0 +1,26 @@
+# Placeholder palette, kept in sync with the colours in
+# .config/hypr/noctalia.lua so both files start from the same baseline.
+# Noctalia regenerates this file from the active theme at runtime, so these
+# values are only what a fresh account sees before its first theme sync.
+palette = 0=#010409
+palette = 1=#f85149
+palette = 2=#56d364
+palette = 3=#d29922
+palette = 4=#58a6ff
+palette = 5=#bc8cff
+palette = 6=#39c5cf
+palette = 7=#c9d1d9
+palette = 8=#6e7681
+palette = 9=#ff7b72
+palette = 10=#7ee787
+palette = 11=#e3b341
+palette = 12=#79c0ff
+palette = 13=#d2a8ff
+palette = 14=#56d4dd
+palette = 15=#f0f6fc
+background = #010409
+foreground = #c9d1d9
+cursor-color = #58a6ff
+cursor-text = #010409
+selection-background = #c9d1d9
+selection-foreground = #010409
