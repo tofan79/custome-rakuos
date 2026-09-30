@@ -170,6 +170,11 @@ for nvidia_xorg_file in "${nvidia_xorg_files[@]}"; do
   echo "  ok ${nvidia_xorg_file}"
 done
 
+## Mask nvidia-powerd and nvidia-persistenced: the pre-baked driver stack ships
+## these units, but without a loaded NVIDIA driver they time out and stall boot.
+systemctl mask nvidia-powerd.service 2>/dev/null || true
+systemctl mask nvidia-persistenced.service 2>/dev/null || true
+
 ## Populate skeleton wallpaper folder with the OFFICIAL base RakuOS wallpaper
 ## set. Noctalia's wallpaper picker points at ~/Pictures/Wallpaper so users get
 ## a real selection out of the box (and can drop in their own files anytime).
