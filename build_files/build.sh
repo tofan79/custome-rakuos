@@ -30,21 +30,14 @@ done
 # packages.list too — and is disabled again at the end of that script.
 rum config-manager --set-enabled terra
 
-## Ensure rpm scriptlets can find a /bin/sh interpreter in this baseless OCI image
-# Some pulled packages (e.g. tk, kf6-kdoctools) run %prein/%post scriptlets via the
-# absolute path /bin/sh; a merged-usr base without /bin fails with
-# "failed to exec scriptlet interpreter /bin/sh: No such file or directory".
-mkdir -p /bin
-ln -sfn /usr/bin/sh /bin/sh
-ln -sfn /usr/bin/bash /usr/bin/sh 2>/dev/null || true
-
 ## Install packages
-## nss-altfiles: base already references the "altfiles" NSS service in
-## /etc/nsswitch.conf (passwd/group) and ships /usr/lib/group + /usr/lib/passwd,
-## but the module library is absent from the minimal image. Without it, initrd
-## tmpfiles/udev cannot resolve system groups (audio, video, disk, tty, utmp,
-## ...) and log ~45 "Failed to resolve group" warnings every boot. Installing
-## the module completes the chain defined in nsswitch.conf and removes the noise.
+## nss-altfiles is NOT installed here on purpose. The base references the
+## "altfiles" NSS service in /etc/nsswitch.conf and ships /usr/lib/group, but
+## installing the module puts it in /usr, where initrd (before /usr is mounted)
+## cannot see it, so the ~45 "Failed to resolve group" warnings per boot come
+## back. post-build-overlay.sh instead bakes the groups straight into /etc/group
+## and lists nss-altfiles in protected-packages.txt so the overlay never
+## shadows it.
 rum install -y --refresh \
   cpio \
   nss-altfiles \
@@ -52,6 +45,10 @@ rum install -y --refresh \
   hyprland-guiutils \
   gloview-git \
   noctalia-git \
+  noctalia-greeter-git \
+  ghostty \
+  ghostty-nautilus \
+  ghostty-kio \
   uwsm \
   pipewire \
   pipewire-alsa \
@@ -67,6 +64,9 @@ rum install -y --refresh \
   grim \
   slurp \
   wtype \
+  cava \
+  tuned \
+  tuned-ppd \
   fprintd-pam \
   adw-gtk3-theme \
   papirus-icon-theme \
@@ -77,19 +77,18 @@ rum install -y --refresh \
   gvfs-nfs \
   gvfs-smb \
   pavucontrol \
+  gnome-calculator \
   NetworkManager-adsl \
   NetworkManager-bluetooth \
   NetworkManager-ppp \
   NetworkManager-wwan \
   nm-connection-editor \
-  power-profiles-daemon \
   libnotify \
-  sddm \
-  sddm-x11 \
   qt6-qtdeclarative \
   qt6-qt5compat \
   qt6-qtsvg \
   qt6ct \
+  qt6ct-kde \
   qt6-qtimageformats \
   systemd-oomd-defaults \
   swash \
@@ -101,26 +100,14 @@ rum install -y --refresh \
   tesseract \
   tesseract-langpack-eng \
   tesseract-langpack-ind \
-  tesseract-langpack-jpn \
-  tesseract-langpack-jpn_vert \
-  tesseract-langpack-kor \
-  tesseract-langpack-kor_vert \
-  tesseract-langpack-chi_sim \
-  tesseract-langpack-chi_sim_vert \
-  tesseract-langpack-chi_tra \
-  tesseract-langpack-chi_tra_vert \
   zbar \
   hyprpicker \
+  gnome-keyring \
+  gnome-keyring-pam \
   cliphist \
-  brightnessctl \
-  playerctl \
   nautilus \
-  nautilus-open-any-terminal-git \
+  cups-pk-helper \
   nomacs \
-  unzip \
-  zip \
-  7zip \
-  unar \
   bat \
   fzf \
   zoxide \
@@ -128,89 +115,18 @@ rum install -y --refresh \
   rakuos-system-qt \
   rakuos-software-qt
 
-## NVIDIA X.Org driver for the SDDM X11 greeter
-## RPM Fusion 615 ships the X.Org driver only in a package variant whose files
-## collide with the full nvidia-driver stack already baked into the base image
-## (firmware blobs, /usr/lib/nvidia/alternate-install-present, the nvidia-powerd
-## unit and the wine nvngx libs). Its "xorg-libs" subpackage hard-Requires that
-## conflicting parent, so no installable package set can provide nvidia_drv.so
-## next to the full stack. The X11 greeter only needs the two Xorg module files,
-## so extract them from the RPM that owns them and leave the full stack alone.
-## These files end up unowned by rpm, which is fine: dnf never touches unowned
-## files, and they live in the immutable /usr of the image, not the live overlay.
-nvidia_xorg_files=(
-  /usr/lib64/xorg/modules/drivers/nvidia_drv.so
-  /usr/lib64/xorg/modules/extensions/libglxserver_nvidia.so
-)
-# Pin to the same version as the pre-baked nvidia-driver stack, otherwise the
-# X.Org module and the userspace libraries disagree and the greeter goes black.
-nvidia_version=$(rpm -q --qf '%{VERSION}' nvidia-driver-libs)
-nvidia_xorg_pkg="xorg-x11-drv-nvidia-xorg-libs"
-nvidia_xorg_rpm=$(rum repoquery --location "$nvidia_xorg_pkg" -q 2>/dev/null | grep -m1 -- "-${nvidia_version}-")
-if [ -z "$nvidia_xorg_rpm" ]; then
-  nvidia_xorg_rpm=$(dnf repoquery --location "$nvidia_xorg_pkg" -q 2>/dev/null | grep -m1 -- "-${nvidia_version}-")
-fi
-if [ -z "$nvidia_xorg_rpm" ]; then
-  echo "ERROR: no ${nvidia_version} download URL found for ${nvidia_xorg_pkg}" >&2
-  exit 1
-fi
-echo "Extracting the X.Org NVIDIA driver from ${nvidia_xorg_rpm}"
-curl -fsSL --retry 3 -o /tmp/nvidia-xorg.rpm "$nvidia_xorg_rpm"
-nvidia_xorg_relpaths=()
-for nvidia_xorg_file in "${nvidia_xorg_files[@]}"; do
-  nvidia_xorg_relpaths+=(".${nvidia_xorg_file}")
-done
-(cd / && rpm2cpio /tmp/nvidia-xorg.rpm | cpio -idm --quiet "${nvidia_xorg_relpaths[@]}")
-rm -f /tmp/nvidia-xorg.rpm
-for nvidia_xorg_file in "${nvidia_xorg_files[@]}"; do
-  if [ ! -f "$nvidia_xorg_file" ]; then
-    echo "ERROR: ${nvidia_xorg_file} missing after extracting ${nvidia_xorg_pkg}" >&2
-    exit 1
-  fi
-  echo "  ok ${nvidia_xorg_file}"
-done
 
-## Mask nvidia-powerd and nvidia-persistenced: the pre-baked driver stack ships
-## these units, but without a loaded NVIDIA driver they time out and stall boot.
-systemctl mask nvidia-powerd.service 2>/dev/null || true
-systemctl mask nvidia-persistenced.service 2>/dev/null || true
 
 ## Remove superseded packages
-rum remove -y wofi 2>/dev/null || true
+rum remove -y wofi kitty kitty-kitten kitty-shell-integration kitty-terminfo 2>/dev/null || true
 
-## Rebuild desktop caches.
-##
-## This image ships no RPM file triggers: /usr/lib/rpm/file-triggers/ does
-## not exist, so package %post/%posttrans never run and these caches are
-## never refreshed after install.
-##
-## Observed, not theoretical. The base image's gschemas.compiled is older
-## than nautilus-50.3, so nautilus aborts on startup with:
-##   GLib-GIO-ERROR: Settings schema 'org.gnome.nautilus.preferences' is
-##   not installed
-##
-## Built once here, after all packages are in. Icon caches are per-theme, so
-## every installed theme needs its own.
+
 glib-compile-schemas /usr/share/glib-2.0/schemas || true
 update-desktop-database -q >/dev/null 2>&1 || true
 update-mime-database /usr/share/mime >/dev/null 2>&1 || true
-for _theme in /usr/share/icons/hicolor /usr/share/icons/Adwaita; do
-    [ -f "$_theme/index.theme" ] && gtk-update-icon-cache -q -f -t "$_theme" >/dev/null 2>&1 || true
-done
-for _theme_dir in /usr/share/icons/*/; do
-    [ -f "${_theme_dir}index.theme" ] || continue
-    case "$_theme_dir" in */hicolor/*|*/Adwaita/*) continue ;; esac
-    gtk-update-icon-cache -q -f -t "${_theme_dir%/}" >/dev/null 2>&1 || true
-done
-unset _theme _theme_dir
-
-## Compile the dconf system database. The nautilus-open-any-terminal default
-## ships as a .d source file under system_files/etc/dconf/db/local.d/, copied
-## in before this script runs; a .d file is inert until dconf turns it into
-## the binary database, so this step is what actually makes the setting take
-## effect. Kept after glib-compile-schemas above, since the value is only
-## readable once that schema is compiled.
+for d in /usr/share/icons/*/; do [ -f "${d}index.theme" ] && gtk-update-icon-cache -q -f -t "${d%/}" || true; done
 dconf update 2>/dev/null || true
+
 
 ## Enable NTP: chrony keeps clock synced across reboots.
 ## RTC is UTC (Windows already configured with RealTimeIsUniversal=1 in registry),
@@ -218,67 +134,36 @@ dconf update 2>/dev/null || true
 rum install -y chrony
 systemctl enable chronyd
 
+
+## Unlock keyring on login
+## Kept verbatim from rakuos-niri/build_files/build.sh. It is currently a no-op:
+## the base no longer ships a commented-out pam_gnome_keyring line in
+## /etc/pam.d/greetd (only pam_kwallet is commented there), so the pattern
+## matches nothing. Kept anyway for parity with the official image and in case a
+## future base re-comments it — sed exits 0 either way, so it cannot break the
+## build.
+sed -i -E 's/^-([a-z]+[[:space:]]+.*pam_gnome_keyring\.so)/\1/' /etc/pam.d/greetd
+
+## Noctalia greeter (greetd)
+## system_files/etc/greetd/config.toml holds the greetd config and is already in
+## place: the Containerfile COPYs system_files before this script runs. What
+## cannot be a file is done here by the setup script the package ships:
+##   - inserts `session required pam_systemd.so` into /etc/pam.d/greetd, without
+##     which logind never creates a session/seat for the greeter's nested wlroots
+##     compositor and the login screen misbehaves;
+##   - creates /var/lib/noctalia-greeter (0750, owned by greeter) for the
+##     wallpaper/palette sync;
+##   - installs greeter.toml plus the polkit action for the appearance tool.
+## The package ships no tmpfiles.d drop-in, so the portable ensure_greeter_paths
+## path inside the script is what actually creates the state dir.
+/usr/share/noctalia-greeter/setup_greeter_system.sh
+
+## The script keeps a timestamped copy of the PAM file. Drop it so the backup
+## does not ship inside the image.
+rm -f /etc/pam.d/greetd.bak.noctalia.*
+
 ## Enable Services
-systemctl enable sddm
+## tuned/tuned-ppd are not enabled explicitly: /usr/lib/systemd/system-preset/
+## 90-default.preset enables both, same as on the niri image.
+systemctl enable greetd
 systemctl enable --global dotfiles-setup
-
-## [NVIDIA dGPU pre-baked image] Mask dkms:
-## nvidia modules are pre-baked into the image for its exact kernel, so the
-## boot-time autoinstall always fails ("already installed, need --force").
-## Kernel updates come bundled with freshly compiled modules from the image CI,
-## so runtime dkms is never needed.
-## ► Devices without an NVIDIA dGPU may skip this block (safe to ignore).
-systemctl mask dkms.service 2>/dev/null || true
-
-## Disable grub-boot-success: it also ships a user-scope unit that fires 2min
-## after login and fails (grub2-set-bootflag needs root), spamming a failed
-## service notification every session. Mask system AND user scope.
-systemctl mask grub-boot-success.service grub-boot-success.timer 2>/dev/null || true
-mkdir -p /etc/systemd/user
-ln -sfn /dev/null /etc/systemd/user/grub-boot-success.service
-ln -sfn /dev/null /etc/systemd/user/grub-boot-success.timer
-
-## [This device — AMD+NVIDIA hybrid ASUS laptop] Disable fwupd:
-## the daemon hangs in D-state on this hardware, stalling boot ~3min and
-## ending in a failed unit. Firmware updates stay manual (menu/EFI).
-## ► Other devices: do NOT disable — fwupd works normally on other hardware.
-ln -sfn /dev/null /etc/systemd/system/fwupd.service
-ln -sfn /dev/null /etc/systemd/system/fwupd-refresh.service
-ln -sfn /dev/null /etc/systemd/system/fwupd-refresh.timer
-
-## Mask mcelog: mcelog userspace daemon does not support AMD (Zen) CPUs and
-## aborts at every boot ("mcelog: ERROR: AMD Processor family 23: mcelog does
-## not support this processor"), leaving a spurious failed unit. AMD MCE
-## decoding is handled in-kernel (edac_mce_amd) already, so this is cosmetic.
-## Relevant here: AMD Ryzen 7 4800H (Zen 2, ACPI family 17h reported as 23).
-## ► AMD-only device; Intel machines should keep mcelog enabled.
-systemctl mask mcelog.service 2>/dev/null || true
-
-## Power management: tuned (a plain tuner from the base image) is left in
-## place, but tuned-ppd — the layer that claimed the Power Profiles API — is
-## replaced by power-profiles-daemon above. Mask the base's tuned.service +
-## tuned-ppd.service so only one power manager owns CPU tuning and the PPD
-## D-Bus interface. Without the mask, tuned's default "balanced" profile
-## (governor + energy_performance_preference + platform_profile) would fight
-## power-profiles-daemon over the same sysfs knobs. tuned.service itself is
-## auto-enabled by the tuned package preset at install time, so it must be
-## masked here explicitly.
-systemctl mask tuned.service tuned-ppd.service 2>/dev/null || true
-
-## Quiet cosmetic systemd-tmpfiles noise on immutable systems:
-## - home.conf: /home and /srv are symlinks into /var here, so the Q/q rules
-##   log "/home already exists and is not a directory" every boot.
-## - root.conf: its `z / 555` rule tries to chmod /, which is a read-only
-##   composefs mount -> "fchmod() of / failed: Read-only file system".
-## - provision.conf: instead of masking it entirely, ship a trimmed copy that
-##   keeps the (credential-based) provisioning behavior but drops the `d- /root`
-##   line, which hits the /root -> /var/roothome symlink and logs "/root already
-##   exists and is not a directory" every boot.
-mkdir -p /etc/tmpfiles.d
-ln -sfn /dev/null /etc/tmpfiles.d/home.conf
-ln -sfn /dev/null /etc/tmpfiles.d/root.conf
-
-## [NVIDIA dGPU] Remove autostart entries that are noisy/failing at login:
-## - nvidia-settings-load: --load-config-only (X11-only) intermittently
-## ► AMD-only devices: this file does not exist, rm -f is a no-op (safe).
-rm -f /etc/xdg/autostart/nvidia-settings-load.desktop 2>/dev/null || true

@@ -1,0 +1,27 @@
+# greetd configuration for Noctalia Greeter.
+#
+# Content matches the generator shipped by noctalia-greeter-git
+# (noctalia-greeter-print-greetd-config -> print_greetd_config_commands in
+# /usr/share/noctalia-greeter/greetd_setup_lib.sh). Regenerate with:
+#   noctalia-greeter-print-greetd-config
+#
+# The command is noctalia-greeter-session, not noctalia-greeter. The session
+# wrapper starts the bundled wlroots compositor and runs the greeter inside it,
+# so greetd has a nested session to hold (upstream README, "What is Noctalia
+# Greeter?"). Pointing greetd straight at noctalia-greeter leaves nothing
+# running the compositor and you get a black VT.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "/usr/bin/noctalia-greeter-session"
+user = "greeter"
+
+# The desktop session is deliberately not pinned. The Hyprland entry
+# (/usr/share/wayland-sessions/hyprland-uwsm.desktop) is generated at build time
+# by post-build.sh, not baked in here, so the session name is not knowable from
+# this file. greetd discovers it from wayland-sessions instead, which is also
+# what upstream documents. To pin it once that name is settled, upstream
+# suggests appending to command:
+#   command = "/usr/bin/noctalia-greeter-session -- --session <name>"

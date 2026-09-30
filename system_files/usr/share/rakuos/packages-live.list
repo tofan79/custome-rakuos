@@ -1,1 +1,1 @@
-zen-browser
+firefox

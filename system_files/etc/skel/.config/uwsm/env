@@ -1,5 +1,8 @@
-export BROWSER=zen-browser
-export TERM=xterm-kitty
+export BROWSER=firefox
+# ghostty's terminfo (x/xterm-ghostty) is already in the base image. kitty's is
+# not: build.sh removes kitty-terminfo, so xterm-kitty would leave every
+# ncurses/TUI app (btop, htop, lazygit) with an unknown terminal type.
+export TERM=xterm-ghostty
 
 # XDG / Session
 export XDG_CURRENT_DESKTOP=Hyprland

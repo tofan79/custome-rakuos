@@ -1,8 +1,0 @@
-# Mask the ThinkPad-only battery-threshold udev rule shipped by
-# ublue-os-udev-rules (/usr/lib/udev/rules.d/99-thinkpad-thresholds-udev.rules).
-# That rule chmod 666s charge_control_start_threshold / charge_start_threshold /
-# charge_stop_threshold, which do not exist on ASUS hardware (only
-# charge_control_end_threshold is exported by the ASUS battery driver). The
-# failing chmod makes udev log a BAT1 warning on every "change" uevent (roughly
-# every minute). A same-named file (or empty/comment-only) in /etc/udev/rules.d
-# takes precedence over /usr/lib/udev/rules.d, disabling the ThinkPad rule.

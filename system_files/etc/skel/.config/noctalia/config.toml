@@ -91,7 +91,10 @@ directory = "/usr/share/backgrounds/rakuos"
 mode = "light"
 
     [theme.templates]
-    builtin_ids = [ "btop", "kitty", "gtk3", "gtk4", "hyprland", "kcolorscheme", "qt", "cava" ]
+    # ghostty, not kitty: build.sh removes the kitty packages. Both ids ship as
+    # templates under /usr/share/noctalia/assets/templates/, so this is a
+    # straight swap and the terminal keeps getting Noctalia's palette.
+    builtin_ids = [ "btop", "ghostty", "gtk3", "gtk4", "hyprland", "kcolorscheme", "qt", "cava" ]
     community_ids = [ "fastfetch", "bat", "fzf", "lazygit" ]
 
 [widget.clock]

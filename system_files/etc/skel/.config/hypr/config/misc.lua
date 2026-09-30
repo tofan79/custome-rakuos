@@ -21,7 +21,7 @@ hl.config({
         disable_splash_rendering = true,
         middle_click_paste = false,
         enable_swallow = true,
-        swallow_regex = "(kitty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)",
+        swallow_regex = "(ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)",
         vrr = -1,
         focus_on_activate = true,
         allow_session_lock_restore = true,

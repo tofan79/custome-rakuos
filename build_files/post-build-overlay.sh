@@ -100,38 +100,6 @@ prebake_overlay_from_installroot() {
         cp -a "$installroot/etc/." /etc/
     fi
 
-    ## This MUST run here, AFTER the installroot /etc payload copy above:
-    ## baked system groups appended earlier in build.sh would otherwise be
-    ## overwritten by that copy. These groups live only in /usr/lib/group
-    ## (altfiles NSS) on Fedora, which is not resolvable during initrd
-    ## (before /usr is mounted), so udev/systemd-tmpfiles can't resolve them.
-    ## We bake them into /etc/group directly (canonical Fedora GIDs) so they
-    ## are resolvable from the very first boot phase.
-    for group in audio video input disk tty kvm render lp clock kmem sgx utmp plugdev; do
-        if ! grep -q "^${group}:" /etc/group; then
-            case "$group" in
-                audio) gid=63 ;;
-                video) gid=39 ;;
-                input) gid=104 ;;
-                disk) gid=6 ;;
-                tty) gid=5 ;;
-                kvm) gid=36 ;;
-                render) gid=105 ;;
-                lp) gid=7 ;;
-                clock) gid=103 ;;
-                kmem) gid=9 ;;
-                sgx) gid=106 ;;
-                utmp) gid=22 ;;
-                *) gid=$(getent group "$group" 2>/dev/null | awk -F: '{print $3}' || true) ;;
-            esac
-            if [ -n "$gid" ]; then
-                echo "${group}:x:${gid}:" >> /etc/group
-            else
-                groupadd -r "$group" 2>/dev/null || true
-            fi
-        fi
-    done
-
     echo "prebaked-installroot" > "$STATE_FILE"
     rm -f "$DIRTY_FILE"
 
@@ -155,89 +123,152 @@ else
     echo "[rakuos] WARNING: No default packages.list - creating empty list."
 fi
 
+# ── Bake system groups into /etc/group ────────────────────────────────────────
+# These groups live only in /usr/lib/group (the altfiles NSS database) on Fedora,
+# which /etc/nsswitch.conf reads via the `altfiles` source:
+#   group: files [SUCCESS=merge] altfiles [SUCCESS=merge] systemd
+# That works once /usr is mounted, but during initrd it is not, so udev rules and
+# systemd-tmpfiles cannot resolve them and the boot log fills with
+#   "Failed to resolve group 'audio': Unknown group"
+# The official rakuos-niri image still logs ~112 of these. Writing the same
+# groups straight into /etc/group (canonical Fedora GIDs, all 12 verified against
+# /usr/lib/group) makes them resolvable from the first boot phase, where /etc
+# always is.
+#
+# This is a top-level step, not part of prebake_overlay_from_installroot, on
+# purpose: prebake returns early when packages.list is empty, which would
+# silently skip the group baking and bring all 112 warnings back.
+#
+# Ordering matters — this must run AFTER the prebake's "cp -a $installroot/etc/.
+# /etc/" step, otherwise that copy overwrites whatever we appended. Calling it
+# from the bottom of this script satisfies that.
+bake_system_groups() {
+    local group gid
+    for group in audio video input disk tty kvm render lp clock kmem sgx utmp plugdev; do
+        grep -q "^${group}:" /etc/group && continue
+        case "$group" in
+            audio) gid=63 ;;
+            video) gid=39 ;;
+            input) gid=104 ;;
+            disk) gid=6 ;;
+            tty) gid=5 ;;
+            kvm) gid=36 ;;
+            render) gid=105 ;;
+            lp) gid=7 ;;
+            clock) gid=103 ;;
+            kmem) gid=9 ;;
+            sgx) gid=106 ;;
+            utmp) gid=22 ;;
+            # plugdev is not shipped by Fedora at all, so there is no canonical
+            # entry in /usr/lib/group to copy. 55 is free in this image and is
+            # the long-standing plugdev GID; left to the fallback below it would
+            # get an arbitrary system GID, which still works but makes udev
+            # permission rules that reference plugdev (10-switch.rules,
+            # 70-u2f.rules) unpredictable across rebuilds.
+            plugdev) gid=55 ;;
+            *) gid=$(getent group "$group" 2>/dev/null | awk -F: '{print $3}' || true) ;;
+        esac
+        if [ -n "$gid" ]; then
+            echo "${group}:x:${gid}:" >> /etc/group
+            echo "[rakuos] Baked group ${group} (gid ${gid}) into /etc/group."
+        else
+            groupadd -r "$group" 2>/dev/null || true
+            echo "[rakuos] WARNING: no gid for ${group}; fell back to groupadd." >&2
+        fi
+    done
+}
+
 # ── Ensure stale state is cleared before prebake writes fresh state ───────────
 rm -f "$STATE_FILE" "$DIRTY_FILE"
 # Ensure packages.list ends with newline
 sed -i -e '$a\' "$PACKAGES_LIST" 2>/dev/null || true
 
+# Appending hyprland protected packages to protected-packages.txt...
+# Every entry here must be a package that build.sh actually installs, plus the
+# two base packages the overlay must never shadow (cpio, nss-altfiles — see the
+# /etc/group baking above). Keeping this in sync with build.sh is what stops the
+# first-boot overlay sync from treating an installed package as removable.
+# Removed along with their build.sh entries: sddm, sddm-x11,
+# power-profiles-daemon, brightnessctl, playerctl, unzip, zip, 7zip, unar,
+# nautilus-open-any-terminal-git, and the tesseract CJK/Korean/Japanese
+# langpacks.
 cat >> /usr/share/rakuos/protected-packages.txt << 'PKGLIST'
 hyprland
 hyprland-guiutils
-gloview-git
+uwsm
 noctalia-git
+noctalia-greeter-git
+gloview-git
 rakuos-welcome-qt
 rakuos-system-qt
-uwsm
+rakuos-software-qt
+ghostty
+ghostty-nautilus
+ghostty-kio
 pipewire
 pipewire-alsa
 pipewire-pulseaudio
 wireplumber
+cava
 xdg-desktop-portal
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-user-dirs-gtk
 xorg-x11-server-Xwayland
-wl-clipboard
 egl-wayland
+wl-clipboard
 grim
 slurp
 wtype
+tuned
+tuned-ppd
 fprintd-pam
+gnome-keyring
+gnome-keyring-pam
 adw-gtk3-theme
-cpio
-nss-altfiles
 papirus-icon-theme
 bibata-cursor-theme
 jetbrainsmono-nerd-fonts
+cpio
+nss-altfiles
 gvfs
 gvfs-mtp
 gvfs-nfs
 gvfs-smb
-pavucontrol
+nautilus
+nomacs
+cups-pk-helper
 NetworkManager-adsl
 NetworkManager-bluetooth
 NetworkManager-ppp
 NetworkManager-wwan
 nm-connection-editor
-power-profiles-daemon
 libnotify
-sddm
-sddm-x11
 qt6-qtdeclarative
 qt6-qt5compat
 qt6-qtsvg
-qt6ct
 qt6-qtimageformats
+qt6ct
+qt6ct-kde
 systemd-oomd-defaults
+chrony
 swash
-tesseract
-tesseract-langpack-eng
-tesseract-langpack-ind
-tesseract-langpack-jpn
-tesseract-langpack-jpn_vert
-tesseract-langpack-kor
-tesseract-langpack-kor_vert
-tesseract-langpack-chi_sim
-tesseract-langpack-chi_sim_vert
-tesseract-langpack-chi_tra
-tesseract-langpack-chi_tra_vert
-zbar
 zsh-autosuggestions
 zsh-syntax-highlighting
 eza
+bat
+fzf
+zoxide
 fastfetch
 starship
 hyprpicker
 cliphist
-brightnessctl
-playerctl
-nautilus
-nautilus-open-any-terminal-git
-nomacs
-unzip
-zip
-7zip
-unar
+pavucontrol
+gnome-calculator
+tesseract
+tesseract-langpack-eng
+tesseract-langpack-ind
+zbar
 PKGLIST
 
 rum remove -y 'selinux-policy*' 'policycoreutils-gui'
@@ -260,6 +291,11 @@ echo "Generating base file manifest..."
 
 echo "Prebaking hyprland overlay payload..."
 prebake_overlay_from_installroot
+
+# Must come after the prebake: that function copies the installroot's /etc over
+# this image's /etc, which would drop any group appended before it.
+echo "Baking system groups into /etc/group..."
+bake_system_groups
 
 # Disable Terra again — build.sh only enabled it for the install steps above
 # (main package set + overlay prebake); third-party repos ship disabled by
