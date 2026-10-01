@@ -142,17 +142,27 @@ rum remove -y wofi kitty kitty-kitten kitty-shell-integration kitty-terminfo 2>/
 ## is left untouched.
 rum remove -y gnome-keyring gnome-keyring-pam
 sed -i -E '/^[[:space:]]*[^#-].*pam_gnome_keyring[.]so/d' /etc/pam.d/greetd /etc/pam.d/passwd
-## Gate on ACTIVE references only, mirroring the sed's [^#-] above. A commented
-## "#auth optional pam_gnome_keyring.so" loads nothing and must not fail the build:
-## an older base shipped these entries commented and the previous revision of this
-## script deliberately uncommented them, so a future base re-commenting them is a
-## plausible, harmless change. Only a line that would actually be read as a stack
-## entry is a real problem.
+## Gate on ACTIVE references only, mirroring the sed's [^#-] above exactly. Two
+## kinds of line load nothing and must not fail the build:
 ##
-## grep piped into grep -v, then grep -q: checking both files in one pass is what
-## catches a second reference, since grep -q alone exits 0 on the very first hit.
-if grep -hvE '^[[:space:]]*#' /etc/pam.d/greetd /etc/pam.d/passwd \
-        | grep -q pam_gnome_keyring; then
+##   "#auth optional pam_gnome_keyring.so"  -- commented out.
+##   "-password optional pam_gnome_keyring.so use_authtok" -- the leading '-'
+##     makes PAM treat it as an entry that is not referenced by any type, so the
+##     module is never loaded. The base ships this form in /etc/pam.d/passwd.
+##
+## The gate previously filtered on '^[[:space:]]*#' only, which caught the
+## commented case but not the '-password' case: the sed above correctly left it
+## alone, then the gate counted it as active and failed the build. Filter on the
+## same [^#-] class the sed deletes on, so "what was removed" and "what is
+## checked" cannot drift apart again.
+##
+## One grep over both files, no pipe: -h suppresses the filename prefix so a single
+## hit still exits 0, and passing both paths is what catches a second reference in
+## the other file. Do NOT filter this through a second grep -v or `grep -q .`: the
+## pattern already matches only what the sed above would have removed, so any
+## downstream filter would see empty input and the gate could never fail.
+if grep -hE '^[[:space:]]*[^#-].*pam_gnome_keyring[.]so' /etc/pam.d/greetd /etc/pam.d/passwd \
+        > /dev/null; then
     echo "build.sh: active pam_gnome_keyring reference left after cleanup" >&2
     exit 1
 fi
