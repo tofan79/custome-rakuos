@@ -87,8 +87,6 @@ rum install -y --refresh \
   nm-connection-editor \
   tuned \
   tuned-ppd \
-  gnome-keyring \
-  gnome-keyring-pam \
   fprintd-pam \
   adw-gtk3-theme \
   bibata-cursor-theme \
@@ -104,6 +102,7 @@ rum install -y --refresh \
   libnotify \
   systemd-oomd-defaults \
   gnome-calculator \
+  gnome-disk-utility \
   nautilus \
   nomacs \
   cups-pk-helper \
@@ -122,28 +121,68 @@ rum install -y --refresh \
 ## so leaving it behind only ships a terminal type nothing references.
 rum remove -y wofi kitty kitty-kitten kitty-shell-integration kitty-terminfo 2>/dev/null || true
 
+## Drop gnome-keyring outright. Not merely unused: it is why every device logged
+## a coredump. gnome-keyring 50.0 aborts during Secret Service session
+## negotiation -- gkd_secret_service_get_pkcs11_session asserts on a NULL client in
+## gkd-secret-session.c, then aes_negotiate dereferences a NULL GVariant and GLib
+## traps. Any client that opens a session triggers it; Firefox was the first one
+## here. Reported upstream as Ubuntu #2161749, end-4/dots-hyprland#2826 and
+## openai/codex#34943, all on 50.0, with no Fedora fix shipped yet. Noctalia and
+## Hyprland work without org.freedesktop.secrets, so nothing in this image loses a
+## feature by dropping it.
+##
+## The base still ships both keyring packages even though they are no longer in the
+## install list above, so the remove is required -- listing nothing is not enough.
+##
+## gnome-keyring-pam goes with it, and the base already wires that module into the
+## greetd stack in two places, both uncommented. Dropping the package alone would
+## leave greetd pointing at a .so that no longer exists, and gnome-keyring-pam
+## ships no %postun to clean up after itself -- so the references go by hand. The
+## pattern skips any line starting with '-', so an entry a future base comments out
+## is left untouched.
+rum remove -y gnome-keyring gnome-keyring-pam
+sed -i -E '/^[[:space:]]*[^#-].*pam_gnome_keyring[.]so/d' /etc/pam.d/greetd /etc/pam.d/passwd
+## Gate on ACTIVE references only, mirroring the sed's [^#-] above. A commented
+## "#auth optional pam_gnome_keyring.so" loads nothing and must not fail the build:
+## an older base shipped these entries commented and the previous revision of this
+## script deliberately uncommented them, so a future base re-commenting them is a
+## plausible, harmless change. Only a line that would actually be read as a stack
+## entry is a real problem.
+##
+## grep piped into grep -v, then grep -q: checking both files in one pass is what
+## catches a second reference, since grep -q alone exits 0 on the very first hit.
+if grep -hvE '^[[:space:]]*#' /etc/pam.d/greetd /etc/pam.d/passwd \
+        | grep -q pam_gnome_keyring; then
+    echo "build.sh: active pam_gnome_keyring reference left after cleanup" >&2
+    exit 1
+fi
 
-## Rebuild derived caches. /usr/lib/rpm/file-triggers is absent in this image, so
-## no trigger ever fires and nothing else builds these. Without gschemas.compiled
-## Nautilus aborts at startup (commit 98be7cb); || true throughout so a cache miss
-## degrades the image but never fails the build.
-glib-compile-schemas /usr/share/glib-2.0/schemas || true
-update-desktop-database -q >/dev/null 2>&1 || true
-update-mime-database /usr/share/mime >/dev/null 2>&1 || true
-for d in /usr/share/icons/*/; do [ -f "${d}index.theme" ] && gtk-update-icon-cache -q -f -t "${d%/}" || true; done
-dconf update 2>/dev/null || true
-
+## rakuos-flatpak-watcher exits 1 on a fresh device with
+##   Error: No such file or directory (os error 2)
+## because nothing has ever created /var/lib/flatpak/exports/bin. Restart=always
+## turns that into start-limit-hit, which leaves the whole system degraded on
+## every boot. packages.list ships no flatpak and build.sh installs none, so there
+## is never a directory for it to watch. Creating it up front is exactly what the
+## first flatpak install would have done. ExecStartPre rather than RuntimeDirectory=
+## because the watcher has to keep watching after it exits, and masking the unit
+## instead would permanently break it for anyone who installs a flatpak later.
+##
+## Confirmed against the journal on the running machine: the unit reached restart
+## counter 5 and then start-limit-hit, having logged "watching
+## /var/lib/flatpak/exports/bin / Setting up watches. / Error: No such file or
+## directory". The daemon is /usr/libexec/rakuos/flatpak-event-watcher, the unit
+## has no Condition*, so this fires on every device that has the base installed.
+mkdir -p /etc/systemd/system/rakuos-flatpak-watcher.service.d
+cat > /etc/systemd/system/rakuos-flatpak-watcher.service.d/10-watchpath.conf << 'WATCHEOF'
+[Service]
+ExecStartPre=/usr/bin/mkdir -p /var/lib/flatpak/exports/bin
+WATCHEOF
+systemctl daemon-reload
 
 ## NTP so the clock stays synced across reboots. RTC is UTC on both sides already
 ## (Windows has RealTimeIsUniversal=1), so no timedatectl set-local-rtc needed.
 rum install -y chrony
 systemctl enable chronyd
-
-
-## Uncomment pam_gnome_keyring in greetd's PAM stack. Currently a no-op: the base only
-## ships pam_kwallet commented there, so the pattern matches nothing and sed exits 0.
-## Kept for parity with the official image in case a future base re-comments it.
-sed -i -E 's/^-([a-z]+[[:space:]]+.*pam_gnome_keyring\.so)/\1/' /etc/pam.d/greetd
 
 ## Noctalia Greeter setup. The greeter account must exist first or
 ## noctalia-greeter-apply-appearance --setup-system aborts the whole RUN step.

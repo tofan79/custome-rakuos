@@ -6,7 +6,10 @@
 # require("config.*")) never lands in the home and Hyprland falls back to its
 # auto-generated default config.
 
-FIRSTRUN="$HOME/.local/share/dotfiles-setup"
+# Marker name matches the official RakuOS niri image (~/.local/share/config-setup)
+# so both images behave identically for anyone moving between them.
+FIRSTRUN="$HOME/.local/share/config-setup"
+OLDRUN="$HOME/.local/share/dotfiles-setup"
 
 # Official RakuOS wallpaper set, copied straight out of the read-only image
 # rather than through /etc/skel. Populating the skeleton at build time would
@@ -38,9 +41,39 @@ if [ -f "$FIRSTRUN" ]; then
     exit 0
 fi
 
+# An older build used dotfiles-setup as the marker. Drop it and fall through to
+# the skel copy so the appearance keys below get applied to those users too.
+[ -f "$OLDRUN" ] && rm -f "$OLDRUN"
+
 cp -r "/etc/skel/." "$HOME"
 
 populate_wallpapers
+
+## Apply the icon theme through GSettings, which is what actually decides icon
+## lookup for GTK4 apps.
+##
+## This cannot be done from the skeleton. Verified on the skel itself: with
+## gtk-icon-theme-name=Colloid-Dark in gtk-{3,4}.0/settings.ini,
+## Gtk.Settings.get_default() reports gtk-theme-name=adw-gtk3-dark (so the file
+## IS read) but still reports gtk-icon-theme-name=Adwaita, no matter what value
+## is written -- including deliberately bogus ones. The key is not consulted for
+## icon lookup on GTK4; org.gnome.desktop.interface.icon-theme is, and its
+## compiled schema default is 'Adwaita'.
+##
+## The settings.ini keys are kept anyway: GTK3 apps and anything reading the
+## file directly still honour them, so this is additive rather than a move.
+##
+## Noctalia's own GTK template (assets/templates/gtk/apply.sh) writes gtk-theme
+## and color-scheme via gsettings but never icon-theme, so nothing else in the
+## session sets this. Same approach as the official CachyOS skel and the RakuOS
+## niri image.
+##
+## Needs a session bus; the unit is WantedBy=default.target so it starts with
+## the graphical session. If gsettings is unavailable this is a no-op and the
+## user can always set the icon theme from the Noctalia/gsettings UI.
+if command -v gsettings > /dev/null 2>&1; then
+    gsettings set org.gnome.desktop.interface icon-theme "Colloid-Dark"
+fi
 
 # $HOME/.local/share is not part of the skeleton, and a user created by
 # rakuos-installer may not have it yet. Without this the touch below fails

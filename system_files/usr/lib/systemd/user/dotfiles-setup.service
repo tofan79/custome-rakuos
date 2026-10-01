@@ -6,8 +6,8 @@
 # GTK/kitty/fastfetch themes, etc.).
 #
 # Idempotent: the script exits immediately if it already ran once for the
-# current user (marker file at ~/.local/share/dotfiles-setup), so on all later
-# boots this unit is a no-op. It is a oneshot that blocks login only while it
+# current user (marker file at ~/.local/share/config-setup), so on all later
+# boots this unit is a no-op. This is a oneshot that blocks login only while it
 # copies, and is WantedBy=default.target to start alongside the session.
 #
 # Without this, Hyprland would boot with no config and fall back to its

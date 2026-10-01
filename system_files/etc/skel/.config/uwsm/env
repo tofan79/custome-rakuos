@@ -7,15 +7,26 @@ export TERM=xterm-ghostty
 
 # Toolkit / Qt / Cursor
 # No icon theme variable here on purpose: gtk-3.0/settings.ini, gtk-4.0/settings.ini,
-# kdeglobals [Icons] and qt6ct.conf all pin Colloid-Dracula, which ships with
+# kdeglobals [Icons] and qt6ct.conf all pin Colloid-Dark, which ships with
 # rakuos-branding in the base image. Setting it here as well would only create a
 # second place to keep in sync.
+#
+# Note the theme name here was Colloid-Dracula for a while, which is wrong: that
+# name symlinks almost entirely to Colloid-Dracula-Light, i.e. light icons under a
+# dark GTK theme. The skel files already say this where they pin it. Comment
+# corrected only -- no behaviour change, since all four files agree on Colloid-Dark.
 export QT_QPA_PLATFORM="wayland;xcb"
 export QT_QPA_PLATFORMTHEME=qt6ct
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export ELECTRON_OZONE_PLATFORM_HINT=auto
 export XCURSOR_THEME=Bibata-Modern-Ice
 export XCURSOR_SIZE=24
+# HYPRCURSOR_THEME is not a Hyprland variable. Checked against the shipped
+# Hyprland binary: the only cursor strings it carries are XCURSOR_THEME and
+# XCURSOR_SIZE, both set above. HYPRCURSOR_* belongs to hyprcursor-plugin, and
+# nothing in this skel loads it, so these two lines were doing nothing. Left in
+# place because they are harmless if a user does add the plugin, but they are not
+# what makes the cursor theme apply -- XCURSOR_THEME above is.
 export HYPRCURSOR_THEME=Bibata-Modern-Ice
 export HYPRCURSOR_SIZE=24
 

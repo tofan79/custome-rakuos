@@ -88,7 +88,20 @@ directory = "/usr/share/backgrounds/rakuos"
     path = "/usr/share/backgrounds/rakuos/RakuOS-Fuji-2.png"
 
 [theme]
-mode = "light"
+# dark, not light. This is the switch the rest of the image follows, and it used
+# to disagree with the GTK settings it controls, which is what made the shell look
+# different from a plain Hyprland setup:
+#   mode = light  ->  apply.sh writes color-scheme=prefer-light AND
+#                     gtk-theme=adw-gtk3 (light)
+#   mode = dark   ->  apply.sh writes color-scheme=prefer-dark  AND
+#                     gtk-theme=adw-gtk3-dark
+# Both writes go through gsettings, so they override ~/.config/gtk-4.0/settings.ini
+# on every appearance sync. With mode = light, Noctalia itself demanded light while
+# the skel separately asked GTK for a dark theme and dark icons -- light shell, dark
+# icons, which is the mismatch that was visible. Now the skel and the shell agree.
+# Note this is only the palette choice, not NightMode: there is no [theme] night or
+# dim key in this config, so nothing dims or warms the screen colour on a schedule.
+mode = "dark"
 
     [theme.templates]
     # ghostty, not kitty: build.sh removes the kitty packages. Both ids ship as

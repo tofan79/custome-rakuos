@@ -4,9 +4,16 @@ Name=noctalia
 TerminalApplication=ghostty
 
 [Icons]
-# See gtk-3.0/settings.ini for why this is Colloid-Dark and not the Dracula variant.
+# Must stay in step with icon-theme in /etc/dconf/db/local.d/10-rakuos-theme
+# and icon_theme in qt6ct/qt6ct.conf.
 Theme=Colloid-Dark
 
 [KDE]
 cursorSize=24
 cursorTheme=Bibata-Modern-Ice
+
+# Intentionally minimal. /usr/share/noctalia/assets/templates/kde/ writes the
+# generated color scheme to $XDG_DATA_HOME/color-schemes/noctalia.colors on
+# theme sync, and that file is the authoritative KColorScheme source. This skel
+# file only seeds the environment (scheme name, icon theme, cursor) so Qt apps
+# start in the expected state before the first sync; it has no other job.

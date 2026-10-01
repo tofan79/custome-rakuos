@@ -55,7 +55,84 @@ DesktopNames=Hyprland
 Type=Application
 EOF
 
-# Drop the nvidia-settings X11 autostart.
+## Harden the service defaults. Everything here is a per-device-neutral decision:
+## none of it assumes a particular NIC, GPU model, or form factor, so the same
+## image behaves identically on every machine it lands on.
+##
+## sshd is masked, not disabled. The base enables it and firewalld opens the ssh
+## service, so a fresh device listens on port 22 before its first user login --
+## a network-exposed daemon on a desktop image that has no use for one. Masking
+## (a symlink to /dev/null in /etc/systemd/system) is stronger than disable:
+## it also blocks a stray `systemctl start sshd` or a package pulling it back
+## in, and it survives `systemctl set-default`/preset runs that would happily
+## re-create the enable symlink.
+## To turn it on when you actually want SSH on a specific machine:
+##     sudo systemctl unmask sshd && sudo systemctl enable --now sshd
+##     sudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload
+systemctl mask sshd
+
+## nvidia-persistenced pins the dGPU awake. Measured on the machine this was
+## written on: the RTX 3050 sat at P0 / D0, ~1500 MHz, 0% utilisation, drawing
+## 17-18 W continuously -- while the desktop was actually rendering on the AMD
+## iGPU through PRIME. That is the entire cost and none of the benefit on a
+## hybrid laptop. PRIME render-offload (/usr/bin/nvidiarun) loads the driver on
+## demand per process, so games and CUDA do not need the daemon.
+##
+## This is disabled rather than masked, and the tradeoff is real, so read this
+## before changing it:
+##
+##   Hybrid laptop (iGPU drives the session) -- this is the case above. Disabling
+##   is clearly right and costs nothing.
+##
+##   NVIDIA-only desktop, or NVIDIA set as the primary display -- disabling is
+##   NOT clearly right. Nothing breaks: the driver still initialises when the
+##   compositor starts, and rendering is unaffected. What is lost is the warm
+##   state, so the first app or the first resume after suspend has to reload the
+##   driver, which on some laptops means a visible delay and, on a few setups, a
+##   black screen that needs a hard reboot. Persistence mode itself is NOT off --
+## the driver has defaulted it on for all GeForce parts since 555, and this image
+## ships 615.71.09; only the daemon that proactively holds the GPU is gone.
+##
+##   No NVIDIA GPU at all -- this is where the base is actually broken. The unit
+##   carries no ConditionPathExists, so it is enabled unconditionally and tries
+##   to open /dev/nvidiactl on every machine regardless of what is in the PCI
+##   slots. The guard below is what fixes that.
+##
+## So: disabled by default because hybrids are the common case and the saving is
+## measured, plus the guard below so nobody gets a failed unit on a non-NVIDIA
+## box. An NVIDIA-only user re-enables it with one command:
+##     sudo systemctl enable --now nvidia-persistenced
+## Make it the default for your own NVIDIA-only machine by running that once; it
+## is per-machine state in /etc, not baked into the image.
+##
+## The guard is ConditionPathExists on /dev/nvidiactl, not on the nvidia module:
+## /dev/nvidiactl is what the daemon actually opens, so it is the precise
+## condition. Without it, enabling this on a machine with no NVIDIA GPU produces
+## a failed unit in every boot log. This also means the enable above is safe to
+## hand out as advice on any machine.
+##
+## NOTE: the README table claims this drop-in already exists as
+## system_files/usr/lib/systemd/system/nvidia-persistenced.service.d/override.conf
+## with a wait-for-node bootstrap. It does not exist -- neither in the repo nor in
+## the base's /usr/lib. The README is stale on this row; this block is the real
+## state.
+mkdir -p /etc/systemd/system/nvidia-persistenced.service.d
+cat > /etc/systemd/system/nvidia-persistenced.service.d/10-hardware-guard.conf << 'NVEOF'
+[Unit]
+ConditionPathExists=/dev/nvidiactl
+NVEOF
+systemctl daemon-reload
+systemctl disable nvidia-persistenced
+
+## updates-archive is a Fedora mirror holding *superseded* builds. Nothing here
+## should ever resolve from it: a package that only exists in the archive is a
+## package that has been withdrawn, and letting dnf pick it means metadata for
+## every release accumulates (hundreds of MB of _metadata) and `dnf upgrade`
+## re-reads it on every run. Disabling is safe because every package this image
+## actually installs resolves from updates/testing/terra.
+rum config-manager --set-disabled updates-archive
+
+## Drop the nvidia-settings X11 autostart.
 # /etc/xdg/autostart/nvidia-settings-load.desktop ships with the
 # nvidia-settings RPM and runs:
 #   sh -c "[ -e /dev/nvidia0 ] && exec /usr/bin/nvidia-settings --load-config-only"

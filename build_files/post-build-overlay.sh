@@ -242,8 +242,6 @@ wtype
 tuned
 tuned-ppd
 fprintd-pam
-gnome-keyring
-gnome-keyring-pam
 adw-gtk3-theme
 bibata-cursor-theme
 jetbrainsmono-nerd-fonts
@@ -282,6 +280,7 @@ hyprpicker
 cliphist
 pavucontrol
 gnome-calculator
+gnome-disk-utility
 tesseract
 tesseract-langpack-eng
 tesseract-langpack-ind
