@@ -12,9 +12,6 @@ on:
         required: false
         default: '1'
 
-  schedule:
-    - cron: '0 17 */3 * *'
-
 env:
   REGISTRY: quay.io
   IMAGE_NAME: quay.io/mindset404/kineticwe-nvidia-v3
